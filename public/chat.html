@@ -1,0 +1,55 @@
+<!-- 
+    CHAT.HTML - Main Chat Room Interface 
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEACE CHAT</title>
+    <!-- Import Google Font 'Inter' -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Link Global CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<!-- Add class 'chat-page' for specific body styling -->
+
+<body class="chat-page">
+
+    <!-- MAIN CHAT CONTAINER -->
+    <div class="container chat-container">
+
+        <!-- Header Section -->
+        <header class="chat-header">
+            <h1>PEACE CHAT</h1>
+            <!-- Logout Button -->
+            <button id="logout-btn" class="btn btn-primary"
+                style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+        </header>
+
+        <!-- Messages Area (Scrollable) -->
+        <div id="messages" class="chat-messages">
+            <!-- Messages will be dynamically inserted here by client.js -->
+
+            <!-- Default Welcome Message -->
+            <div class="message other">
+                <div class="message-meta">System</div>
+                Welcome to the chat!
+            </div>
+        </div>
+
+        <!-- Input Area (Fixed at bottom) -->
+        <div class="chat-input-area">
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            <button id="send-btn" class="btn btn-primary btn-send">Send</button>
+        </div>
+    </div>
+
+    <!-- Import Socket.io Client Library -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Import My Client Logic -->
+    <script src="client.js"></script>
+</body>
+
+</html>
