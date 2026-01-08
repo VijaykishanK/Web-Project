@@ -9,10 +9,14 @@ if (location.protocol === 'file:') {
 
 // Initialize Socket.io client connection safely
 let socket;
-try {
-    socket = io();
-} catch (e) {
-    console.warn('Socket.io library not loaded. Real-time features disabled until connected to server.');
+if (typeof io !== 'undefined') {
+    try {
+        socket = io();
+    } catch (e) {
+        console.error('Socket.io error:', e);
+    }
+} else {
+    console.warn('Socket.io library not loaded. Real-time features disabled.');
 }
 
 // Helper: Get username from LocalStorage to keep user logged in
@@ -83,6 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const username = document.getElementById('reg-username').value.trim();
             const password = document.getElementById('reg-password').value.trim();
 
+            if (!username || !password) {
+                alert('Username and password are required');
+                return;
+            }
+
             try {
                 const res = await fetch('/api/register', {
                     method: 'POST',
@@ -90,8 +99,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ username, password })
                 });
 
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned an invalid response (not JSON)');
+                }
+
+                const data = await res.json();
+
                 if (!res.ok) {
-                    const data = await res.json();
                     throw new Error(data.message || 'Registration failed');
                 }
 

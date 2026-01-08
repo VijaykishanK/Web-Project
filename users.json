@@ -18,5 +18,17 @@
   {
     "username": "newuser_local",
     "password": "password123"
+  },
+  {
+    "username": "testuser",
+    "password": "password"
+  },
+  {
+    "username": "testuser4",
+    "password": "password"
+  },
+  {
+    "username": "testuser5",
+    "password": "password"
   }
 ]
