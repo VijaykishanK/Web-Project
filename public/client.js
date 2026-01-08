@@ -12,11 +12,32 @@ let socket;
 if (typeof io !== 'undefined') {
     try {
         socket = io();
+        socket.on('connect', () => {
+            console.log('Socket connected successfully:', socket.id);
+            updateConnectionStatus(true);
+        });
+        socket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+            updateConnectionStatus(false);
+        });
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
+            updateConnectionStatus(false);
+        });
     } catch (e) {
-        console.error('Socket.io error:', e);
+        console.error('Socket.io initialization error:', e);
     }
 } else {
     console.warn('Socket.io library not loaded. Real-time features disabled.');
+}
+
+function updateConnectionStatus(connected) {
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    if (statusDot && statusText) {
+        statusDot.style.backgroundColor = connected ? '#22c55e' : '#ef4444';
+        statusText.innerText = connected ? 'Connected' : 'Disconnected';
+    }
 }
 
 // Helper: Get username from LocalStorage to keep user logged in
@@ -142,9 +163,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function sendMessage() {
             const text = messageInput.value.trim();
-            if (text && socket) {
-                socket.emit('chat_message', text);
-                messageInput.value = '';
+            if (text) {
+                if (socket && socket.connected) {
+                    console.log('Sending message:', text);
+                    socket.emit('chat_message', text);
+                    messageInput.value = '';
+                } else {
+                    console.error('Cannot send message: Socket not connected');
+                    alert('You are disconnected. Please wait or refresh the page.');
+                }
             }
         }
 

@@ -86,13 +86,17 @@ app.all('/api/*', (req, res) => {
 
 // Socket.io logic
 io.on('connection', (socket) => {
+    console.log('New socket connection:', socket.id);
+
     socket.on('join', (username) => {
         socket.username = username;
+        console.log(`User ${username} joined (ID: ${socket.id})`);
         socket.broadcast.emit('system_message', `${username} has joined the chat`);
         socket.emit('system_message', `Welcome to PEACE CHAT, ${username}!`);
     });
 
     socket.on('chat_message', (msg) => {
+        console.log(`Message from ${socket.username}: ${msg}`);
         io.emit('chat_message', {
             user: socket.username,
             text: msg,
@@ -100,10 +104,15 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+        console.log(`Socket disconnected: ${socket.id}, reason: ${reason}`);
         if (socket.username) {
             io.emit('system_message', `${socket.username} has left the chat`);
         }
+    });
+
+    socket.on('error', (err) => {
+        console.error('Socket error:', err);
     });
 });
 
@@ -115,5 +124,13 @@ if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`CRITICAL ERROR: Port ${PORT} is already in use.`);
+            console.error('The server cannot start. Please stop any other process running on this port.');
+            process.exit(1);
+        } else {
+            console.error('SERVER ERROR:', err);
+        }
     });
 }
