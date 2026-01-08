@@ -14,5 +14,9 @@
   {
     "username": "Vijay",
     "password": "123"
+  },
+  {
+    "username": "newuser_local",
+    "password": "password123"
   }
 ]
