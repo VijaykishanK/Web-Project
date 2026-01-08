@@ -98,6 +98,16 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+// Route: Health Check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Catch-all for undefined /api routes to always return JSON
+app.all('/api/*', (req, res) => {
+    res.status(404).json({ success: false, message: 'API route not found' });
+});
+
 // ================================================================
 // REAL-TIME CHAT LOGIC (Socket.io)
 // ================================================================

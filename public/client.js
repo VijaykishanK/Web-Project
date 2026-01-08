@@ -56,6 +56,11 @@ if (loginForm) {
         const password = document.getElementById('login-password').value.trim();
 
         try {
+            // Helper to check if current origin is correct
+            if (window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')) {
+                console.warn('You are not on localhost. If login fails, check if the backend is running.');
+            }
+
             // Send login request to server
             const res = await fetch('/api/login', {
                 method: 'POST',
@@ -63,23 +68,31 @@ if (loginForm) {
                 body: JSON.stringify({ username, password })
             });
 
-            if (!res.ok) {
-                // If server returns 401 or 400
-                const errData = await res.json();
-                throw new Error(errData.message || 'Login failed');
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                // Unexpected response type (likely HTML error page)
+                const text = await res.text();
+                console.error('Expected JSON, got:', text.substring(0, 100));
+                throw new Error('Server returned an invalid response (not JSON). Make sure the server is running on http://localhost:3000');
             }
 
             const data = await res.json();
+
+            if (!res.ok) {
+                // If server returns 401, 400, etc. with a JSON body
+                throw new Error(data.message || 'Login failed');
+            }
+
             // If login successful, save username and redirect to chat
             if (data.success) {
                 localStorage.setItem('chat_username', data.username);
                 window.location.href = '/chat.html';
             } else {
-                alert(data.message); // Show error message
+                alert(data.message || 'Unknown error');
             }
         } catch (err) {
-            console.error(err);
-            alert('Login Error: ' + err.message + '\nMake sure the server is running on http://localhost:3000');
+            console.error('Login Error:', err);
+            alert('Login Error: ' + err.message);
         }
     });
 
@@ -97,16 +110,21 @@ if (loginForm) {
                 body: JSON.stringify({ username, password })
             });
 
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned an invalid response (not JSON). Please check if the server is running.');
+            }
+
             const data = await res.json();
-            if (data.success) {
+            if (res.ok && data.success) {
                 alert('Registration successful! Please login.');
                 registerDiv.classList.add('hidden');
                 loginDiv.classList.remove('hidden'); // Switch to login view
             } else {
-                alert(data.message);
+                alert(data.message || 'Registration failed');
             }
         } catch (err) {
-            console.error(err);
+            console.error('Registration Error:', err);
             alert('Registration Error: ' + err.message);
         }
     });
