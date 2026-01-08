@@ -31,17 +31,26 @@ app.use(express.json());
 // Returns: Array of user objects
 function getUsers() {
     try {
+        if (!fs.existsSync(USERS_FILE)) {
+            return [];
+        }
         const data = fs.readFileSync(USERS_FILE, 'utf8');
         return JSON.parse(data);
     } catch (err) {
-        // If file doesn't exist or error, return empty array
+        console.error('Error reading or parsing users.json:', err.message);
+        // If file is corrupted or error, return empty array to prevent crash
         return [];
     }
 }
 
 // Helper function: Save users array back to the JSON file
 function saveUsers(users) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    try {
+        fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    } catch (err) {
+        console.error('CRITICAL ERROR: Failed to save users.json:', err.message);
+        // We log the error but don't let the server crash
+    }
 }
 
 // ================================================================
@@ -118,8 +127,11 @@ io.on('connection', (socket) => {
     // Event: User joins the chat
     socket.on('join', (username) => {
         socket.username = username; // Attach username to the socket session
+        console.log(`User joined: ${username}`);
         // Broadcast to everyone ELSE that a user joined
-        io.emit('system_message', `${username} has joined the chat`);
+        socket.broadcast.emit('system_message', `${username} has joined the chat`);
+        // Send a private system message to the user who joined
+        socket.emit('system_message', `Welcome to PEACE CHAT, ${username}!`);
     });
 
     // Event: User sends a message

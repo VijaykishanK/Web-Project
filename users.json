@@ -4,19 +4,11 @@
     "password": "password"
   },
   {
-    "username": "vijay",
-    "password": "123"
+    "username": "testuser_99",
+    "password": "password"
   },
   {
-    "username": "hitesh",
-    "password": "1234"
-  },
-  {
-    "username": "ajinkya",
-    "password": "1234"
-  },
-  {
-    "username": "testuser",
+    "username": "testuser_browser",
     "password": "password"
   }
 ]
