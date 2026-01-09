@@ -41,14 +41,10 @@ function displayMessage(data) {
     // Deduplicate based on ID
     const msgId = data.id || `${data.user}-${data.text}-${data.timestamp}`;
 
-    console.log('displayMessage called:', { msgId, text: data.text, user: data.user });
-
     if (displayedMessageIds.has(msgId)) {
-        console.log('DUPLICATE DETECTED - Skipping:', msgId);
-        return;
+        return; // Skip duplicate messages
     }
     displayedMessageIds.add(msgId);
-    console.log('Message added to display:', msgId);
 
     // Format time locally
     const messageDate = data.timestamp ? new Date(data.timestamp) : new Date();
@@ -271,20 +267,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const sendBtn = document.getElementById('send-btn');
         const logoutBtn = document.getElementById('logout-btn');
 
+        let isSending = false; // Flag to prevent duplicate sends
+
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
 
+            // Prevent duplicate sends
+            if (isSending) {
+                return;
+            }
+
+            isSending = true;
             messageInput.value = '';
 
             // PRIORITY 1: Use Socket.io if connected (real-time, no duplicates)
             if (socket && socket.connected) {
-                console.log('Sending message via socket.io:', text);
                 socket.emit('chat_message', text);
                 // No optimistic display needed - socket.io is fast enough
                 // and we'll receive the message back via the 'chat_message' event
+                isSending = false; // Reset flag immediately for socket.io
             } else {
-                console.log('Sending message via API (socket disconnected):', text);
                 // FALLBACK: Use API when socket.io is unavailable
                 // Show optimistic message since polling has 3-second delay
                 const optimisticMsg = {
@@ -308,13 +311,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (err) {
                     console.error('Failed to send message via API:', err);
                     alert('Failed to send message. Please check your connection.');
+                } finally {
+                    isSending = false; // Reset flag after API call completes
                 }
             }
         }
 
         sendBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent any default behavior
+                sendMessage();
+            }
         });
 
         logoutBtn.addEventListener('click', () => {
@@ -324,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (socket) {
             socket.on('chat_message', (data) => {
-                console.log('Received chat_message via socket:', data);
                 displayMessage(data);
             });
 
