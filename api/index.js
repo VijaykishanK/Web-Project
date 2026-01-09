@@ -119,8 +119,9 @@ app.post('/api/messages', (req, res) => {
     // Limit to last 100 messages
     if (messages.length > 100) messages.shift();
 
-    // Still broadcast to socket if available (for local dev)
-    io.emit('chat_message', newMessage);
+    // NOTE: We do NOT emit via socket.io here to avoid duplicates.
+    // The socket.io 'chat_message' handler will handle real-time broadcasting.
+    // This API endpoint is purely for fallback/polling when socket.io is unavailable.
 
     res.json({ success: true, message: newMessage });
 });

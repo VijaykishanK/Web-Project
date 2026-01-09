@@ -268,32 +268,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = messageInput.value.trim();
             if (!text) return;
 
-            // Optimistically show the message instantly
-            const optimisticMsg = {
-                user: username,
-                text: text,
-                timestamp: Date.now(),
-                id: 'opt-' + Date.now()
-            };
-            displayMessage(optimisticMsg);
             messageInput.value = '';
 
-            // Try sending via API
-            try {
-                const res = await fetch('/api/messages', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, text })
-                });
+            // PRIORITY 1: Use Socket.io if connected (real-time, no duplicates)
+            if (socket && socket.connected) {
+                socket.emit('chat_message', text);
+                // No optimistic display needed - socket.io is fast enough
+                // and we'll receive the message back via the 'chat_message' event
+            } else {
+                // FALLBACK: Use API when socket.io is unavailable
+                // Show optimistic message since polling has 3-second delay
+                const optimisticMsg = {
+                    user: username,
+                    text: text,
+                    timestamp: Date.now(),
+                    id: 'opt-' + Date.now() + Math.random()
+                };
+                displayMessage(optimisticMsg);
 
-                if (!res.ok) throw new Error('API failed');
+                try {
+                    const res = await fetch('/api/messages', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, text })
+                    });
 
-            } catch (err) {
-                console.warn('API send failed, falling back to socket:', err);
-                if (socket && socket.connected) {
-                    socket.emit('chat_message', text);
-                } else {
-                    alert('Connection lost. Message might not have been sent.');
+                    if (!res.ok) {
+                        throw new Error('API failed');
+                    }
+                } catch (err) {
+                    console.error('Failed to send message via API:', err);
+                    alert('Failed to send message. Please check your connection.');
                 }
             }
         }
@@ -325,8 +330,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // --- API POLLING (Vercel Fix) ---
+        // --- API POLLING (Fallback when Socket.io is unavailable) ---
         async function pollMessages() {
+            // Only poll if socket.io is NOT connected
+            if (socket && socket.connected) {
+                return; // Skip polling when real-time connection is active
+            }
+
             try {
                 const res = await fetch('/api/messages');
                 if (res.ok) {
@@ -338,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Poll every 3 seconds for new messages
+        // Poll every 3 seconds for new messages (only when socket.io is down)
         setInterval(pollMessages, 3000);
         pollMessages(); // Initial poll
     }
