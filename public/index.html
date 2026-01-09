@@ -38,6 +38,11 @@
         <div class="auth-toggle">
             Don't have an account? <a href="#" id="show-register">Create one</a>
         </div>
+
+        <p
+            style="font-size: 0.75rem; color: #94a3b8; margin-top: 2rem; border-top: 1px solid #334155; padding-top: 1rem;">
+            <b>Note:</b> This is a demo. Accounts and messages are cleared when the server restarts on Vercel.
+        </p>
     </div>
 
     <!-- REGISTER CONTAINER (Hidden by default) -->
@@ -62,8 +67,8 @@
         </div>
     </div>
 
-    <!-- Import Socket.io Client Library -->
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Import Socket.io Client Library from CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <!-- Frontend Logic Script -->
     <script src="client.js"></script>
 </body>

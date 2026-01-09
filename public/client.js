@@ -59,8 +59,14 @@ function updateConnectionStatus(connected) {
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
     if (statusDot && statusText) {
-        statusDot.style.backgroundColor = connected ? '#22c55e' : '#ef4444';
-        statusText.innerText = connected ? 'Connected' : 'Disconnected';
+        if (connected) {
+            statusDot.style.backgroundColor = '#22c55e';
+            statusText.innerText = 'Connected (Real-time)';
+        } else {
+            // Since we have polling fallback, we aren't "disconnected" from the service
+            statusDot.style.backgroundColor = '#eab308'; // Amber for polling
+            statusText.innerText = 'API Active (Polling Mode)';
+        }
     }
 }
 
@@ -155,9 +161,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(data.message || 'Registration failed');
                 }
 
-                alert('Registration successful! Please login.');
-                registerDiv.classList.add('hidden');
-                loginDiv.classList.remove('hidden');
+                // VISUAL FEEDBACK: Change button to show success
+                const regBtn = registerForm.querySelector('button');
+                const originalText = regBtn.innerText;
+                regBtn.innerText = 'Account Created! Clicking to Login';
+                regBtn.style.backgroundColor = '#22c55e';
+                regBtn.type = 'button'; // Prevent re-submit
+
+                // When they click the "Success" button, take them to login
+                regBtn.onclick = () => {
+                    registerDiv.classList.add('hidden');
+                    loginDiv.classList.remove('hidden');
+                    // Reset button state
+                    regBtn.innerText = originalText;
+                    regBtn.style.backgroundColor = '';
+                    regBtn.type = 'submit';
+                    regBtn.onclick = null;
+                };
+
+                // Also auto-switch after 2 seconds if they don't click
+                setTimeout(() => {
+                    if (!registerDiv.classList.contains('hidden')) {
+                        regBtn.click();
+                    }
+                }, 2500);
             } catch (err) {
                 console.error('Registration Error:', err);
                 alert('Registration Error: ' + err.message);
