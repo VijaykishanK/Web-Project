@@ -40,8 +40,15 @@ function displayMessage(data) {
 
     // Deduplicate based on ID
     const msgId = data.id || `${data.user}-${data.text}-${data.timestamp}`;
-    if (displayedMessageIds.has(msgId)) return;
+
+    console.log('displayMessage called:', { msgId, text: data.text, user: data.user });
+
+    if (displayedMessageIds.has(msgId)) {
+        console.log('DUPLICATE DETECTED - Skipping:', msgId);
+        return;
+    }
     displayedMessageIds.add(msgId);
+    console.log('Message added to display:', msgId);
 
     // Format time locally
     const messageDate = data.timestamp ? new Date(data.timestamp) : new Date();
@@ -272,10 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // PRIORITY 1: Use Socket.io if connected (real-time, no duplicates)
             if (socket && socket.connected) {
+                console.log('Sending message via socket.io:', text);
                 socket.emit('chat_message', text);
                 // No optimistic display needed - socket.io is fast enough
                 // and we'll receive the message back via the 'chat_message' event
             } else {
+                console.log('Sending message via API (socket disconnected):', text);
                 // FALLBACK: Use API when socket.io is unavailable
                 // Show optimistic message since polling has 3-second delay
                 const optimisticMsg = {
@@ -315,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (socket) {
             socket.on('chat_message', (data) => {
+                console.log('Received chat_message via socket:', data);
                 displayMessage(data);
             });
 

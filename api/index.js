@@ -154,6 +154,8 @@ io.on('connection', (socket) => {
         messages.push(newMessage);
         if (messages.length > 100) messages.shift();
 
+        // Send to ALL clients including sender
+        // Using io.emit ensures everyone gets the message exactly once
         io.emit('chat_message', newMessage);
     });
 
