@@ -36,6 +36,10 @@
         </form>
 
         <div class="auth-toggle">
+            <a href="#" id="show-forgot">Forgot password?</a>
+        </div>
+
+        <div class="auth-toggle">
             Don't have an account? <a href="#" id="show-register">Create one</a>
         </div>
 
@@ -64,6 +68,28 @@
 
         <div class="auth-toggle">
             Already have an account? <a href="#" id="show-login">Sign In</a>
+        </div>
+    </div>
+
+    <!-- FORGOT PASSWORD CONTAINER (Hidden by default) -->
+    <div class="container hidden" id="forgot-form">
+        <h1>Reset Password</h1>
+        <p class="subtitle">Enter your username and a new password</p>
+
+        <form id="form-reset">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="reset-username" placeholder="johndoe" required>
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="reset-password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Password</button>
+        </form>
+
+        <div class="auth-toggle">
+            Back to <a href="#" id="back-to-login">Sign In</a>
         </div>
     </div>
 

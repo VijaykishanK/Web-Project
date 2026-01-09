@@ -76,6 +76,24 @@ app.post('/api/login', (req, res) => {
     }
 });
 
+app.post('/api/reset-password', (req, res) => {
+    const { username, newPassword } = req.body;
+    if (!username || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Username and new password required' });
+    }
+
+    const users = getUsers();
+    const user = users.find(u => u.username === username);
+
+    if (user) {
+        user.password = newPassword;
+        saveUsers(users);
+        res.json({ success: true, message: 'Password reset successful' });
+    } else {
+        res.status(404).json({ success: false, message: 'Username not found' });
+    }
+});
+
 // In-memory message store for polling fallback (Vercel compatible)
 let messages = [];
 
@@ -92,8 +110,8 @@ app.post('/api/messages', (req, res) => {
     const newMessage = {
         user: username,
         text: text,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        id: Date.now()
+        timestamp: Date.now(),
+        id: Date.now() + Math.random()
     };
 
     messages.push(newMessage);
@@ -127,8 +145,8 @@ io.on('connection', (socket) => {
         const newMessage = {
             user: socket.username,
             text: msg,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            id: Date.now()
+            timestamp: Date.now(),
+            id: Date.now() + Math.random()
         };
 
         // Save to in-memory store for polling clients

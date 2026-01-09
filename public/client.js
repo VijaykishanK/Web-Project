@@ -38,17 +38,21 @@ function displayMessage(data) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
 
-    // Deduplicate based on unique attributes if ID is missing, or use ID
-    const msgId = data.id || `${data.user}-${data.text}-${data.time}`;
+    // Deduplicate based on ID
+    const msgId = data.id || `${data.user}-${data.text}-${data.timestamp}`;
     if (displayedMessageIds.has(msgId)) return;
     displayedMessageIds.add(msgId);
+
+    // Format time locally
+    const messageDate = data.timestamp ? new Date(data.timestamp) : new Date();
+    const timeString = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const div = document.createElement('div');
     const username = getStoredUser();
     const isOwn = data.user === username;
     div.className = `message ${isOwn ? 'own' : 'other'}`;
     div.innerHTML = `
-        <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${data.time}</div>
+        <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${timeString}</div>
         ${data.text}
     `;
     messagesDiv.appendChild(div);
@@ -85,21 +89,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('form-register');
 
     if (loginForm) {
-        const showRegisterDetails = document.getElementById('show-register');
-        const showLoginDetails = document.getElementById('show-login');
+        // Elements
         const loginDiv = document.getElementById('login-form');
         const registerDiv = document.getElementById('register-form');
+        const forgotDiv = document.getElementById('forgot-form');
 
+        const showRegisterDetails = document.getElementById('show-register');
+        const showLoginDetails = document.getElementById('show-login');
+        const showForgotDetails = document.getElementById('show-forgot');
+        const backToLoginDetails = document.getElementById('back-to-login');
+
+        const resetForm = document.getElementById('form-reset');
+
+        // Toggles
         showRegisterDetails.addEventListener('click', (e) => {
             e.preventDefault();
             loginDiv.classList.add('hidden');
+            forgotDiv.classList.add('hidden');
             registerDiv.classList.remove('hidden');
         });
 
         showLoginDetails.addEventListener('click', (e) => {
             e.preventDefault();
             registerDiv.classList.add('hidden');
+            forgotDiv.classList.add('hidden');
             loginDiv.classList.remove('hidden');
+        });
+
+        showForgotDetails.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginDiv.classList.add('hidden');
+            forgotDiv.classList.remove('hidden');
+        });
+
+        backToLoginDetails.addEventListener('click', (e) => {
+            e.preventDefault();
+            forgotDiv.classList.add('hidden');
+            loginDiv.classList.remove('hidden');
+        });
+
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reset-username').value.trim();
+            const newPassword = document.getElementById('reset-password').value.trim();
+
+            try {
+                const res = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, newPassword })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert('Password updated successfully! Please login.');
+                    forgotDiv.classList.add('hidden');
+                    loginDiv.classList.remove('hidden');
+                } else {
+                    alert(data.message || 'Reset failed');
+                }
+            } catch (err) {
+                console.error('Reset Error:', err);
+                alert('Reset Error: ' + err.message);
+            }
         });
 
         loginForm.addEventListener('submit', async (e) => {
@@ -216,7 +268,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = messageInput.value.trim();
             if (!text) return;
 
-            // Try sending via API (more reliable on Vercel)
+            // Optimistically show the message instantly
+            const optimisticMsg = {
+                user: username,
+                text: text,
+                timestamp: Date.now(),
+                id: 'opt-' + Date.now()
+            };
+            displayMessage(optimisticMsg);
+            messageInput.value = '';
+
+            // Try sending via API
             try {
                 const res = await fetch('/api/messages', {
                     method: 'POST',
@@ -224,22 +286,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ username, text })
                 });
 
-                if (res.ok) {
-                    messageInput.value = '';
-                    const data = await res.json();
-                    if (data.success) {
-                        displayMessage(data.message);
-                    }
-                } else {
-                    throw new Error('API failed');
-                }
+                if (!res.ok) throw new Error('API failed');
+
             } catch (err) {
                 console.warn('API send failed, falling back to socket:', err);
                 if (socket && socket.connected) {
                     socket.emit('chat_message', text);
-                    messageInput.value = '';
                 } else {
-                    alert('Connection lost. Please try again in a moment.');
+                    alert('Connection lost. Message might not have been sent.');
                 }
             }
         }

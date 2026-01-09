@@ -158,7 +158,7 @@ input:focus {
 
 /* Toggle Link (Login <-> Register) */
 .auth-toggle {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     font-size: 0.9rem;
     color: var(--text-muted);
 }
