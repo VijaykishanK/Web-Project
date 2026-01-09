@@ -76,8 +76,35 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', v: '1.1', timestamp: new Date().toISOString() });
+// In-memory message store for polling fallback (Vercel compatible)
+let messages = [];
+
+app.get('/api/messages', (req, res) => {
+    res.json(messages);
+});
+
+app.post('/api/messages', (req, res) => {
+    const { username, text } = req.body;
+    if (!username || !text) {
+        return res.status(400).json({ success: false, message: 'Missing username or text' });
+    }
+
+    const newMessage = {
+        user: username,
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        id: Date.now()
+    };
+
+    messages.push(newMessage);
+
+    // Limit to last 100 messages
+    if (messages.length > 100) messages.shift();
+
+    // Still broadcast to socket if available (for local dev)
+    io.emit('chat_message', newMessage);
+
+    res.json({ success: true, message: newMessage });
 });
 
 app.all('/api/*', (req, res) => {
@@ -97,11 +124,18 @@ io.on('connection', (socket) => {
 
     socket.on('chat_message', (msg) => {
         console.log(`Message from ${socket.username}: ${msg}`);
-        io.emit('chat_message', {
+        const newMessage = {
             user: socket.username,
             text: msg,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            id: Date.now()
+        };
+
+        // Save to in-memory store for polling clients
+        messages.push(newMessage);
+        if (messages.length > 100) messages.shift();
+
+        io.emit('chat_message', newMessage);
     });
 
     socket.on('disconnect', (reason) => {

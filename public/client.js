@@ -31,6 +31,30 @@ if (typeof io !== 'undefined') {
     console.warn('Socket.io library not loaded. Real-time features disabled.');
 }
 
+// Track displayed message IDs to avoid duplicates
+const displayedMessageIds = new Set();
+
+function displayMessage(data) {
+    const messagesDiv = document.getElementById('messages');
+    if (!messagesDiv) return;
+
+    // Deduplicate based on unique attributes if ID is missing, or use ID
+    const msgId = data.id || `${data.user}-${data.text}-${data.time}`;
+    if (displayedMessageIds.has(msgId)) return;
+    displayedMessageIds.add(msgId);
+
+    const div = document.createElement('div');
+    const username = getStoredUser();
+    const isOwn = data.user === username;
+    div.className = `message ${isOwn ? 'own' : 'other'}`;
+    div.innerHTML = `
+        <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${data.time}</div>
+        ${data.text}
+    `;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
 function updateConnectionStatus(connected) {
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
@@ -161,16 +185,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const sendBtn = document.getElementById('send-btn');
         const logoutBtn = document.getElementById('logout-btn');
 
-        function sendMessage() {
+        async function sendMessage() {
             const text = messageInput.value.trim();
-            if (text) {
+            if (!text) return;
+
+            // Try sending via API (more reliable on Vercel)
+            try {
+                const res = await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, text })
+                });
+
+                if (res.ok) {
+                    messageInput.value = '';
+                    const data = await res.json();
+                    if (data.success) {
+                        displayMessage(data.message);
+                    }
+                } else {
+                    throw new Error('API failed');
+                }
+            } catch (err) {
+                console.warn('API send failed, falling back to socket:', err);
                 if (socket && socket.connected) {
-                    console.log('Sending message:', text);
                     socket.emit('chat_message', text);
                     messageInput.value = '';
                 } else {
-                    console.error('Cannot send message: Socket not connected');
-                    alert('You are disconnected. Please wait or refresh the page.');
+                    alert('Connection lost. Please try again in a moment.');
                 }
             }
         }
@@ -187,15 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (socket) {
             socket.on('chat_message', (data) => {
-                const div = document.createElement('div');
-                const isOwn = data.user === username;
-                div.className = `message ${isOwn ? 'own' : 'other'}`;
-                div.innerHTML = `
-                    <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${data.time}</div>
-                    ${data.text}
-                `;
-                messagesDiv.appendChild(div);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                displayMessage(data);
             });
 
             socket.on('system_message', (msg) => {
@@ -209,5 +243,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             });
         }
+
+        // --- API POLLING (Vercel Fix) ---
+        async function pollMessages() {
+            try {
+                const res = await fetch('/api/messages');
+                if (res.ok) {
+                    const messages = await res.json();
+                    messages.forEach(msg => displayMessage(msg));
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+            }
+        }
+
+        // Poll every 3 seconds for new messages
+        setInterval(pollMessages, 3000);
+        pollMessages(); // Initial poll
     }
 });
