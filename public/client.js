@@ -15,6 +15,9 @@ if (typeof io !== 'undefined') {
         socket.on('connect', () => {
             console.log('Socket connected successfully:', socket.id);
             updateConnectionStatus(true);
+            // Request latest user list on connect
+            const username = getStoredUser();
+            if (username) socket.emit('join', username);
         });
         socket.on('disconnect', (reason) => {
             console.log('Socket disconnected:', reason);
@@ -38,8 +41,8 @@ function displayMessage(data) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
 
-    // Deduplicate based on ID
-    const msgId = data.id || `${data.user}-${data.text}-${data.timestamp}`;
+    // Deduplicate based on ID - Force String comparison
+    const msgId = String(data.id || `${data.user}-${data.text}-${data.timestamp}`);
 
     if (displayedMessageIds.has(msgId)) {
         return; // Skip duplicate messages
@@ -353,7 +356,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (socket) {
-            socket.emit('join', username);
+            // Ensure we join if we have a socket connection already or when it connects
+            if (socket.connected) {
+                socket.emit('join', username);
+            }
         }
 
         const messagesDiv = document.getElementById('messages');
