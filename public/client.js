@@ -409,12 +409,14 @@ document.addEventListener('DOMContentLoaded', () => {
             isSending = true;
             messageInput.value = '';
 
+            // Generate ID on client size (timestamp + random string)
+            const clientMsgId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
             // PRIORITY 1: Use Socket.io if connected (real-time, no duplicates)
             if (socket && socket.connected) {
-                socket.emit('chat_message', text);
-                // No optimistic display needed - socket.io is fast enough
-                // and we'll receive the message back via the 'chat_message' event
-                isSending = false; // Reset flag immediately for socket.io
+                // Send object with ID explicitly
+                socket.emit('chat_message', { text, id: clientMsgId });
+                isSending = false;
             } else {
                 // FALLBACK: Use API when socket.io is unavailable
                 // Show optimistic message since polling has 3-second delay
@@ -422,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     user: username,
                     text: text,
                     timestamp: Date.now(),
-                    id: 'opt-' + Date.now() + Math.random()
+                    id: clientMsgId // Use the SAME ID
                 };
                 displayMessage(optimisticMsg);
 
@@ -430,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await fetch('/api/messages', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, text })
+                        body: JSON.stringify({ username, text, clientMsgId }) // Send ID to server
                     });
 
                     if (!res.ok) {

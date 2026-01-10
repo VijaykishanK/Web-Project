@@ -17,10 +17,31 @@ const onlineUsers = new Map();
 // Track user status metadata: username -> { lastSeen: timestamp, onlineSince: timestamp }
 const userStatus = new Map();
 
-// Path to users.json - Use /tmp for limited write access if needed, 
-// but for now, we'll try to read from the project root.
-// Note: Writes to process.cwd() will NOT persist on Vercel.
-const USERS_FILE = path.join(process.cwd(), 'users.json');
+// detect if running on Vercel
+const IS_VERCEL = process.env.VERCEL === '1';
+
+// Path to users.json
+// On Vercel, we MUST use /tmp for write access.
+// We also need to copy the seed file there if it doesn't exist.
+const SEED_FILE = path.join(process.cwd(), 'users.json');
+const USERS_FILE = IS_VERCEL ? '/tmp/users.json' : SEED_FILE;
+
+// Initialize Storage (Copy seed to /tmp if needed)
+if (IS_VERCEL) {
+    if (!fs.existsSync(USERS_FILE)) {
+        try {
+            if (fs.existsSync(SEED_FILE)) {
+                fs.copyFileSync(SEED_FILE, USERS_FILE);
+                console.log('Copied seed users.json to /tmp');
+            } else {
+                fs.writeFileSync(USERS_FILE, '[]');
+                console.log('Created empty users.json in /tmp');
+            }
+        } catch (e) {
+            console.error('Failed to initialize /tmp storage:', e);
+        }
+    }
+}
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -28,20 +49,18 @@ app.use(express.json());
 function getUsers() {
     try {
         if (!fs.existsSync(USERS_FILE)) {
-            console.log('users.json not found, returning empty array');
             return [];
         }
         const data = fs.readFileSync(USERS_FILE, 'utf8');
         return JSON.parse(data);
     } catch (err) {
-        console.error('Error reading or parsing users.json:', err.message);
+        console.error('Error reading users.json:', err.message);
         return [];
     }
 }
 
 function saveUsers(users) {
     try {
-        // NOTE: This will fail on Vercel production but work locally.
         fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
     } catch (err) {
         console.error('CRITICAL ERROR: Failed to save users.json:', err.message);
@@ -135,22 +154,28 @@ app.get('/api/messages', (req, res) => {
 });
 
 app.post('/api/messages', (req, res) => {
-    const { username, text } = req.body;
+    const { username, text, clientMsgId } = req.body; // Accept ID from client
     if (!username || !text) {
         return res.status(400).json({ success: false, message: 'Missing username or text' });
     }
+
+    // Use client provided ID if available, otherwise generate one (fallback)
+    const msgId = clientMsgId || (Date.now() + Math.random());
 
     const newMessage = {
         user: username,
         text: text,
         timestamp: Date.now(),
-        id: Date.now() + Math.random()
+        id: msgId
     };
 
-    messages.push(newMessage);
-
-    // Limit to last 100 messages
-    if (messages.length > 100) messages.shift();
+    // Check if we already have this message (deduplication on server side)
+    // This handles race condition if socket and api both send same message
+    if (!messages.find(m => m.id === newMessage.id)) {
+        messages.push(newMessage);
+        // Limit to last 100 messages
+        if (messages.length > 100) messages.shift();
+    }
 
     // NOTE: We do NOT emit via socket.io here to avoid duplicates.
     // The socket.io 'chat_message' handler will handle real-time broadcasting.
@@ -201,18 +226,25 @@ io.on('connection', (socket) => {
         socket.emit('system_message', `Welcome to PEACE CHAT, ${username}!`);
     });
 
-    socket.on('chat_message', (msg) => {
-        console.log(`Message from ${socket.username}: ${msg}`);
+    socket.on('chat_message', (payload) => {
+        // Payload can be string (old client) or object { text, id } (new client)
+        const msgText = typeof payload === 'object' ? payload.text : payload;
+        const msgId = typeof payload === 'object' ? payload.id : (Date.now() + Math.random());
+
+        console.log(`Message from ${socket.username}: ${msgText}`);
+
         const newMessage = {
             user: socket.username,
-            text: msg,
+            text: msgText,
             timestamp: Date.now(),
-            id: Date.now() + Math.random()
+            id: msgId
         };
 
-        // Save to in-memory store for polling clients
-        messages.push(newMessage);
-        if (messages.length > 100) messages.shift();
+        // Save to in-memory store for polling clients if not exists
+        if (!messages.find(m => m.id === newMessage.id)) {
+            messages.push(newMessage);
+            if (messages.length > 100) messages.shift();
+        }
 
         // Send to ALL clients including sender
         // Using io.emit ensures everyone gets the message exactly once
