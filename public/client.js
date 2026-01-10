@@ -36,10 +36,41 @@ if (typeof io !== 'undefined') {
 
 // Track displayed message IDs to avoid duplicates
 const displayedMessageIds = new Set();
+// Private Chat State
+let activeChatPartner = null;
+
+// Initialize Heartbeat (Vercel Keep-Alive)
+setInterval(() => {
+    if (localStorage.getItem('chat_username')) {
+        fetch('/api/heartbeat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: localStorage.getItem('chat_username') })
+        }).catch(err => console.error('Heartbeat failed:', err));
+    }
+}, 10000); // 10 seconds
 
 function displayMessage(data) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
+
+    // PRIVATE CHAT FILTERING:
+    // Only show message if it belongs to the current conversation
+    // 1. If I am the sender, show it (provided I sent it TO the current partner)
+    // 2. If I am the receiver, show it ONLY if it came FROM the current partner
+    const currentUser = getStoredUser();
+
+    // If we haven't selected a chat partner, we shouldn't see chat messages (except system)
+    if (!activeChatPartner && data.user !== 'System') {
+        return;
+    }
+
+    if (activeChatPartner) {
+        // If I sent it, but not to this partner -> Hide
+        if (data.user === currentUser && data.to !== activeChatPartner) return;
+        // If someone else sent it, but not my partner -> Hide (maybe add notification later)
+        if (data.user !== currentUser && data.user !== activeChatPartner && data.user !== 'System') return;
+    }
 
     // Deduplicate based on ID - Force String comparison
     const msgId = String(data.id || `${data.user}-${data.text}-${data.timestamp}`);
@@ -104,58 +135,106 @@ function updateUserListUI() {
     if (!userListDiv) return;
 
     userListDiv.innerHTML = '';
-
     const currentUsername = getStoredUser();
+    const now = Date.now();
 
-    // Convert map to array and sort (online first, then by name)
+    // Convert map to array and sort (online first, close second)
     const users = Array.from(usersMap.entries()).map(([username, data]) => ({
         username,
         ...data
-    })).sort((a, b) => {
-        if (a.status === b.status) return a.username.localeCompare(b.username);
-        return a.status === 'online' ? -1 : 1;
+    })).sort((a, b) => { // Online users first
+        const aOnline = a.status === 'online';
+        const bOnline = b.status === 'online';
+        if (aOnline && !bOnline) return -1;
+        if (!aOnline && bOnline) return 1;
+        return a.username.localeCompare(b.username);
     });
 
     users.forEach(u => {
-        const isMe = u.username === currentUsername;
+        // Don't show myself in the contact list (1:1 chat style)
+        if (u.username === currentUsername) return;
+
         const div = document.createElement('div');
         div.className = 'user-item';
+        // STYLE: Highlight active chat
+        if (activeChatPartner === u.username) {
+            div.style.background = 'rgba(255, 255, 255, 0.2)';
+            div.style.borderLeft = '3px solid #fff';
+        } else {
+            div.style.background = 'rgba(255, 255, 255, 0.05)';
+        }
+
         div.style.padding = '0.5rem';
         div.style.marginBottom = '0.5rem';
         div.style.borderRadius = '8px';
-        div.style.background = 'rgba(255, 255, 255, 0.05)';
         div.style.display = 'flex';
         div.style.alignItems = 'center';
         div.style.gap = '0.5rem';
+        div.style.cursor = 'pointer'; // Make clickable
+
+        // CLICK HANDLER: Select user to chat
+        div.onclick = () => {
+            activeChatPartner = u.username;
+            updateChatHeader();
+            updateUserListUI(); // Re-render to show highlight
+            loadChatHistory();  // Fetch conversation
+        };
 
         const statusColor = u.status === 'online' ? '#22c55e' : '#94a3b8';
-
         let statusText = 'Offline';
         const options = { hour: '2-digit', minute: '2-digit' };
 
         if (u.status === 'online') {
             if (u.onlineSince) {
-                statusText = `Online since ${new Date(u.onlineSince).toLocaleTimeString([], options)}`;
+                const mins = Math.floor((now - u.onlineSince) / 60000);
+                statusText = mins < 1 ? 'Online' : `Online ${mins}m`;
             } else {
                 statusText = 'Online';
             }
         } else {
             if (u.lastSeen) {
-                statusText = `Offline since ${new Date(u.lastSeen).toLocaleTimeString([], options)}`;
-            } else {
-                statusText = 'Offline';
+                const mins = Math.floor((now - u.lastSeen) / 60000);
+                statusText = mins < 60 ? `Seen ${mins}m ago` : `Seen ${new Date(u.lastSeen).toLocaleTimeString([], options)}`;
             }
         }
 
         div.innerHTML = `
             <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor};"></div>
             <div style="flex: 1; overflow: hidden;">
-                <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${u.username} ${isMe ? '(You)' : ''}</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${statusText}</div>
+                <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${u.username}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${statusText}</div>
             </div>
         `;
         userListDiv.appendChild(div);
     });
+}
+
+function updateChatHeader() {
+    // Find header (assume h1 in chat-header)
+    const header = document.querySelector('.chat-header h1');
+    if (header) {
+        if (activeChatPartner) {
+            header.innerText = `Chatting with ${activeChatPartner}`;
+        } else {
+            header.innerText = 'Select a user to chat';
+        }
+    }
+}
+
+async function loadChatHistory() {
+    clearMessagesUI(); // Clear current view
+    const username = getStoredUser();
+    if (!username || !activeChatPartner) return;
+
+    // Show loading?
+
+    try {
+        const res = await fetch(`/api/messages?username=${username}&targetUser=${activeChatPartner}`);
+        if (res.ok) {
+            const data = await res.json();
+            data.forEach(m => displayMessage(m)); // dedupe handles it, but we cleared anyway
+        }
+    } catch (e) { console.error('History load failed', e); }
 }
 
 function updateConnectionStatus(connected) {
@@ -401,6 +480,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = messageInput.value.trim();
             if (!text) return;
 
+            if (!activeChatPartner) {
+                alert('Please select a user to chat with first!');
+                return;
+            }
+
             // Prevent duplicate sends
             if (isSending) {
                 return;
@@ -414,8 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // PRIORITY 1: Use Socket.io if connected (real-time, no duplicates)
             if (socket && socket.connected) {
-                // Send object with ID explicitly
-                socket.emit('chat_message', { text, id: clientMsgId });
+                // Send object with ID explicitly and TO recipient
+                socket.emit('chat_message', { text, id: clientMsgId, to: activeChatPartner });
                 isSending = false;
             } else {
                 // FALLBACK: Use API when socket.io is unavailable
@@ -424,7 +508,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     user: username,
                     text: text,
                     timestamp: Date.now(),
-                    id: clientMsgId // Use the SAME ID
+                    id: clientMsgId, // Use the SAME ID
+                    to: activeChatPartner
                 };
                 displayMessage(optimisticMsg);
 
@@ -432,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await fetch('/api/messages', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, text, clientMsgId }) // Send ID to server
+                        body: JSON.stringify({ username, text, clientMsgId, to: activeChatPartner }) // Send ID to server
                     });
 
                     if (!res.ok) {
@@ -505,7 +590,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // Pass username to filter messages based on lastCleared timestamp
-                const res = await fetch(`/api/messages?username=${encodeURIComponent(username)}`);
+                // AND targetUser (active chat)
+                const target = activeChatPartner ? `&targetUser=${encodeURIComponent(activeChatPartner)}` : '';
+                const res = await fetch(`/api/messages?username=${encodeURIComponent(username)}${target}`);
+
                 if (res.ok) {
                     const messages = await res.json();
                     messages.forEach(msg => displayMessage(msg));

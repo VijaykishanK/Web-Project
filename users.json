@@ -47,5 +47,10 @@
   {
     "username": "Ayushi",
     "password": "2427"
+  },
+  {
+    "username": "Alice",
+    "password": "123",
+    "lastCleared": 0
   }
 ]

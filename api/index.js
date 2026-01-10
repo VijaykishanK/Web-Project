@@ -137,16 +137,51 @@ app.post('/api/clear-chat', (req, res) => {
 // In-memory message store for polling fallback (Vercel compatible)
 let messages = [];
 
-app.get('/api/messages', (req, res) => {
-    const { username } = req.query; // Optional: filter by user context if needed
+// HEARTBEAT ENDPOINT (For Vercel-compatible online status)
+app.post('/api/heartbeat', (req, res) => {
+    const { username } = req.body;
+    if (username) {
+        const currentStatus = userStatus.get(username) || {};
+        userStatus.set(username, {
+            ...currentStatus,
+            lastActive: Date.now(),
+            onlineSince: currentStatus.onlineSince || Date.now()
+        });
+        res.json({ success: true });
+    } else {
+        res.status(400).json({ success: false });
+    }
+});
 
-    // If username is provided, filter messages based on their lastCleared timestamp
+app.get('/api/messages', (req, res) => {
+    const { username, targetUser } = req.query;
+
+    // Filter messages for privacy
+    // If username is provided, show:
+    // 1. Messages SENT by username
+    // 2. Messages SENT TO username
+    // 3. Public messages (to: null/undefined) - (if we supported them, but now request is private)
+
     let resultMessages = messages;
     if (username) {
+        // First filter by persistence/clear
         const users = getUsers();
         const user = users.find(u => u.username === username);
         if (user && user.lastCleared) {
-            resultMessages = messages.filter(m => m.timestamp > user.lastCleared);
+            resultMessages = resultMessages.filter(m => m.timestamp > user.lastCleared);
+        }
+
+        // Then filter by conversation partner if specified
+        if (targetUser) {
+            resultMessages = resultMessages.filter(m =>
+                (m.user === username && m.to === targetUser) ||
+                (m.user === targetUser && m.to === username)
+            );
+        } else {
+            // General fetch (e.g. on load?): Return ALL messages relevant to me?
+            // User asked: "messages should not be visible to everyone".
+            // So we strictly return messages where (user == me OR to == me).
+            resultMessages = resultMessages.filter(m => m.user === username || m.to === username);
         }
     }
 
@@ -154,7 +189,7 @@ app.get('/api/messages', (req, res) => {
 });
 
 app.post('/api/messages', (req, res) => {
-    const { username, text, clientMsgId } = req.body; // Accept ID from client
+    const { username, text, clientMsgId, to } = req.body; // Accept ID and 'to' from client
     if (!username || !text) {
         return res.status(400).json({ success: false, message: 'Missing username or text' });
     }
@@ -166,15 +201,15 @@ app.post('/api/messages', (req, res) => {
         user: username,
         text: text,
         timestamp: Date.now(),
-        id: msgId
+        id: msgId,
+        to: to // Store recipient
     };
 
     // Check if we already have this message (deduplication on server side)
-    // This handles race condition if socket and api both send same message
     if (!messages.find(m => m.id === newMessage.id)) {
         messages.push(newMessage);
         // Limit to last 100 messages
-        if (messages.length > 100) messages.shift();
+        if (messages.length > 1000) messages.shift(); // Increase limit for multi-user chat history
     }
 
     // NOTE: We do NOT emit via socket.io here to avoid duplicates.
@@ -194,60 +229,54 @@ io.on('connection', (socket) => {
 
     socket.on('join', (username) => {
         socket.username = username;
-        onlineUsers.set(socket.id, username);
+        // Don't rely solely on socket for online status but update it here too
+        const currentStatus = userStatus.get(username) || {};
+        userStatus.set(username, { ...currentStatus, lastActive: Date.now(), onlineSince: currentStatus.onlineSince || Date.now() });
 
         console.log(`User ${username} joined (ID: ${socket.id})`);
 
-        // Update status tracking
-        const currentStatus = userStatus.get(username) || {};
-        userStatus.set(username, { ...currentStatus, onlineSince: Date.now() });
-
-        // Broadcast online status with timestamp
-        io.emit('status_update', {
-            username,
-            status: 'online',
-            onlineSince: Date.now()
-        });
-
-        // Send current list of online users and their statuses to the joining user
+        // Send user list based on Heartbeat status
+        const now = Date.now();
         const allUsers = getUsers().map(u => {
             const statusMeta = userStatus.get(u.username) || {};
-            const isOnline = Array.from(onlineUsers.values()).includes(u.username);
+            // Consider online if active in last 30 seconds
+            const isOnline = statusMeta.lastActive && (now - statusMeta.lastActive < 30000);
             return {
                 username: u.username,
                 status: isOnline ? 'online' : 'offline',
-                lastSeen: statusMeta.lastSeen || null,
+                lastSeen: statusMeta.lastActive || null,
                 onlineSince: isOnline ? statusMeta.onlineSince : null
             };
         });
         socket.emit('user_list', allUsers);
 
-        socket.broadcast.emit('system_message', `${username} has joined the chat`);
-        socket.emit('system_message', `Welcome to PEACE CHAT, ${username}!`);
+        // Notify others that a user is potentially active (optional, heartbeat does this periodically)
+        // socket.broadcast.emit('system_message', `${username} has joined the chat`);
     });
 
     socket.on('chat_message', (payload) => {
-        // Payload can be string (old client) or object { text, id } (new client)
+        // Payload can be string (old client) or object { text, id, to }
         const msgText = typeof payload === 'object' ? payload.text : payload;
         const msgId = typeof payload === 'object' ? payload.id : (Date.now() + Math.random());
+        const msgTo = typeof payload === 'object' ? payload.to : null;
 
-        console.log(`Message from ${socket.username}: ${msgText}`);
+        console.log(`Message from ${socket.username} to ${msgTo}: ${msgText}`);
 
         const newMessage = {
             user: socket.username,
             text: msgText,
             timestamp: Date.now(),
-            id: msgId
+            id: msgId,
+            to: msgTo
         };
 
-        // Save to in-memory store for polling clients if not exists
+        // Save
         if (!messages.find(m => m.id === newMessage.id)) {
             messages.push(newMessage);
-            if (messages.length > 100) messages.shift();
+            if (messages.length > 1000) messages.shift();
         }
 
-        // Send to ALL clients including sender
-        // Using io.emit ensures everyone gets the message exactly once
+        // Broadcast to all (Clients filter) - Most reliable for Vercel
         io.emit('chat_message', newMessage);
     });
 
