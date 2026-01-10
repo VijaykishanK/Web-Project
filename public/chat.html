@@ -24,7 +24,7 @@
 
         <!-- Header Section -->
         <header class="chat-header">
-            <div class="header-left">
+            <div class="header-left" style="display: flex; align-items: center; gap: 0.8rem;">
                 <h1>PEACE CHAT</h1>
                 <!-- Connection Status -->
                 <div id="connection-status" class="status-indicator">
@@ -32,9 +32,13 @@
                     <span id="status-text">Connecting...</span>
                 </div>
             </div>
-            <div class="header-right">
+            <div class="header-right" style="display: flex; gap: 0.5rem;">
+                <button id="users-toggle-btn" class="btn btn-secondary mobile-only"
+                    style="width: auto; padding: 0.5rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1); display: none;">
+                    Users
+                </button>
                 <button id="clear-chat-btn" class="btn btn-secondary"
-                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; margin-right: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;">Clear
+                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;">Clear
                     Chat</button>
                 <button id="logout-btn" class="btn btn-primary"
                     style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>

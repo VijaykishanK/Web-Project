@@ -312,3 +312,69 @@ input:focus {
 .hidden {
     display: none !important;
 }
+
+/* ================================================================ */
+/* MEDIA QUERIES FOR RESPONSIVENESS */
+/* ================================================================ */
+
+@media (max-width: 768px) {
+    .chat-container {
+        height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+        border: none;
+    }
+
+    .container {
+        max-width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* Mobile Header adjustments */
+    .chat-header h1 {
+        font-size: 1.2rem;
+    }
+
+    #status-text {
+        display: none;
+        /* Hide text, keep dot */
+    }
+
+    /* Show Mobile Toggle */
+    .mobile-only {
+        display: block !important;
+    }
+
+    /* Sidebar - Initially hidden on mobile (or overlay) */
+    .user-sidebar {
+        position: absolute;
+        top: 60px;
+        /* Below header */
+        left: 0;
+        bottom: 0;
+        width: 100% !important;
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(20px);
+        z-index: 50;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .user-sidebar.active {
+        transform: translateX(0);
+    }
+
+    /* Adjust chat messages area when on mobile */
+    .chat-messages {
+        padding: 1rem;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+}

@@ -14,7 +14,7 @@ const io = new Server(server);
 
 // Track online users: socket.id -> username
 const onlineUsers = new Map();
-// Track user status metadata: username -> { lastSeen: timestamp }
+// Track user status metadata: username -> { lastSeen: timestamp, onlineSince: timestamp }
 const userStatus = new Map();
 
 // Path to users.json - Use /tmp for limited write access if needed, 
@@ -173,15 +173,28 @@ io.on('connection', (socket) => {
 
         console.log(`User ${username} joined (ID: ${socket.id})`);
 
-        // Broadcast online status
-        io.emit('status_update', { username, status: 'online' });
+        // Update status tracking
+        const currentStatus = userStatus.get(username) || {};
+        userStatus.set(username, { ...currentStatus, onlineSince: Date.now() });
+
+        // Broadcast online status with timestamp
+        io.emit('status_update', {
+            username,
+            status: 'online',
+            onlineSince: Date.now()
+        });
 
         // Send current list of online users and their statuses to the joining user
-        const allUsers = getUsers().map(u => ({
-            username: u.username,
-            status: Array.from(onlineUsers.values()).includes(u.username) ? 'online' : 'offline',
-            lastSeen: userStatus.get(u.username)?.lastSeen || null
-        }));
+        const allUsers = getUsers().map(u => {
+            const statusMeta = userStatus.get(u.username) || {};
+            const isOnline = Array.from(onlineUsers.values()).includes(u.username);
+            return {
+                username: u.username,
+                status: isOnline ? 'online' : 'offline',
+                lastSeen: statusMeta.lastSeen || null,
+                onlineSince: isOnline ? statusMeta.onlineSince : null
+            };
+        });
         socket.emit('user_list', allUsers);
 
         socket.broadcast.emit('system_message', `${username} has joined the chat`);

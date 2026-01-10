@@ -78,7 +78,23 @@ function clearMessagesUI() {
 }
 
 // User List Management
-let usersMap = new Map(); // username -> { status, lastSeen }
+let usersMap = new Map(); // username -> { status, lastSeen, onlineSince }
+let isSidebarOpen = false;
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('user-sidebar');
+    const toggleBtn = document.getElementById('users-toggle-btn');
+    if (!sidebar) return;
+
+    isSidebarOpen = !isSidebarOpen;
+    if (isSidebarOpen) {
+        sidebar.classList.add('active');
+        if (toggleBtn) toggleBtn.style.background = 'rgba(255, 255, 255, 0.3)';
+    } else {
+        sidebar.classList.remove('active');
+        if (toggleBtn) toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+    }
+}
 
 function updateUserListUI() {
     const userListDiv = document.getElementById('user-list');
@@ -110,9 +126,23 @@ function updateUserListUI() {
         div.style.gap = '0.5rem';
 
         const statusColor = u.status === 'online' ? '#22c55e' : '#94a3b8';
-        const statusText = u.status === 'online'
-            ? 'Online'
-            : (u.lastSeen ? `Last seen: ${new Date(u.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Offline');
+
+        let statusText = 'Offline';
+        const options = { hour: '2-digit', minute: '2-digit' };
+
+        if (u.status === 'online') {
+            if (u.onlineSince) {
+                statusText = `Online since ${new Date(u.onlineSince).toLocaleTimeString([], options)}`;
+            } else {
+                statusText = 'Online';
+            }
+        } else {
+            if (u.lastSeen) {
+                statusText = `Offline since ${new Date(u.lastSeen).toLocaleTimeString([], options)}`;
+            } else {
+                statusText = 'Offline';
+            }
+        }
 
         div.innerHTML = `
             <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor};"></div>
@@ -330,6 +360,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const sendBtn = document.getElementById('send-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const clearChatBtn = document.getElementById('clear-chat-btn');
+        const toggleUsersBtn = document.getElementById('users-toggle-btn');
+
+        if (toggleUsersBtn) {
+            toggleUsersBtn.addEventListener('click', toggleSidebar);
+        }
 
         if (clearChatBtn) {
             clearChatBtn.addEventListener('click', async () => {
@@ -425,15 +460,19 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.on('user_list', (users) => {
                 // Initial full list
                 users.forEach(u => {
-                    usersMap.set(u.username, { status: u.status, lastSeen: u.lastSeen });
+                    usersMap.set(u.username, {
+                        status: u.status,
+                        lastSeen: u.lastSeen,
+                        onlineSince: u.onlineSince
+                    });
                 });
                 updateUserListUI();
             });
 
             socket.on('status_update', (data) => {
-                const { username, status, lastSeen } = data;
+                const { username, status, lastSeen, onlineSince } = data;
                 const existing = usersMap.get(username) || {};
-                usersMap.set(username, { ...existing, status, lastSeen });
+                usersMap.set(username, { ...existing, status, lastSeen, onlineSince });
                 updateUserListUI();
             });
 
