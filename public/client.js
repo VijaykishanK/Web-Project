@@ -60,6 +60,69 @@ function displayMessage(data) {
     `;
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function clearMessagesUI() {
+    const messagesDiv = document.getElementById('messages');
+    if (messagesDiv) {
+        messagesDiv.innerHTML = '';
+        displayedMessageIds.clear();
+        // Re-add welcome message
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'message other';
+        welcomeDiv.innerHTML = `<div class="message-meta">System</div>Welcome to the chat!`;
+        messagesDiv.appendChild(welcomeDiv);
+    }
+}
+
+// User List Management
+let usersMap = new Map(); // username -> { status, lastSeen }
+
+function updateUserListUI() {
+    const userListDiv = document.getElementById('user-list');
+    if (!userListDiv) return;
+
+    userListDiv.innerHTML = '';
+
+    const currentUsername = getStoredUser();
+
+    // Convert map to array and sort (online first, then by name)
+    const users = Array.from(usersMap.entries()).map(([username, data]) => ({
+        username,
+        ...data
+    })).sort((a, b) => {
+        if (a.status === b.status) return a.username.localeCompare(b.username);
+        return a.status === 'online' ? -1 : 1;
+    });
+
+    users.forEach(u => {
+        const isMe = u.username === currentUsername;
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.style.padding = '0.5rem';
+        div.style.marginBottom = '0.5rem';
+        div.style.borderRadius = '8px';
+        div.style.background = 'rgba(255, 255, 255, 0.05)';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '0.5rem';
+
+        const statusColor = u.status === 'online' ? '#22c55e' : '#94a3b8';
+        const statusText = u.status === 'online'
+            ? 'Online'
+            : (u.lastSeen ? `Last seen: ${new Date(u.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Offline');
+
+        div.innerHTML = `
+            <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor};"></div>
+            <div style="flex: 1; overflow: hidden;">
+                <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${u.username} ${isMe ? '(You)' : ''}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${statusText}</div>
+            </div>
+        `;
+        userListDiv.appendChild(div);
+    });
 }
 
 function updateConnectionStatus(connected) {
@@ -266,6 +329,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const messagesDiv = document.getElementById('messages');
         const sendBtn = document.getElementById('send-btn');
         const logoutBtn = document.getElementById('logout-btn');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+
+        if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to clear your chat history?')) return;
+
+                try {
+                    const res = await fetch('/api/clear-chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username })
+                    });
+
+                    if (res.ok) {
+                        clearMessagesUI();
+                    } else {
+                        alert('Failed to clear chat');
+                    }
+                } catch (err) {
+                    console.error('Clear Chat Error:', err);
+                    alert('Error clearing chat');
+                }
+            });
+        }
 
         let isSending = false; // Flag to prevent duplicate sends
 
@@ -335,6 +422,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayMessage(data);
             });
 
+            socket.on('user_list', (users) => {
+                // Initial full list
+                users.forEach(u => {
+                    usersMap.set(u.username, { status: u.status, lastSeen: u.lastSeen });
+                });
+                updateUserListUI();
+            });
+
+            socket.on('status_update', (data) => {
+                const { username, status, lastSeen } = data;
+                const existing = usersMap.get(username) || {};
+                usersMap.set(username, { ...existing, status, lastSeen });
+                updateUserListUI();
+            });
+
             socket.on('system_message', (msg) => {
                 const div = document.createElement('div');
                 div.style.textAlign = 'center';
@@ -355,7 +457,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const res = await fetch('/api/messages');
+                // Pass username to filter messages based on lastCleared timestamp
+                const res = await fetch(`/api/messages?username=${encodeURIComponent(username)}`);
                 if (res.ok) {
                     const messages = await res.json();
                     messages.forEach(msg => displayMessage(msg));

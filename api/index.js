@@ -12,6 +12,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Track online users: socket.id -> username
+const onlineUsers = new Map();
+// Track user status metadata: username -> { lastSeen: timestamp }
+const userStatus = new Map();
+
 // Path to users.json - Use /tmp for limited write access if needed, 
 // but for now, we'll try to read from the project root.
 // Note: Writes to process.cwd() will NOT persist on Vercel.
@@ -57,7 +62,7 @@ app.post('/api/register', (req, res) => {
         return res.status(400).json({ success: false, message: 'Username already taken' });
     }
 
-    users.push({ username, password });
+    users.push({ username, password, lastCleared: 0 });
     saveUsers(users);
 
     console.log('User registered success:', username);
@@ -94,11 +99,39 @@ app.post('/api/reset-password', (req, res) => {
     }
 });
 
+app.post('/api/clear-chat', (req, res) => {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ success: false, message: 'Username required' });
+
+    const users = getUsers();
+    const user = users.find(u => u.username === username);
+
+    if (user) {
+        user.lastCleared = Date.now();
+        saveUsers(users);
+        res.json({ success: true, message: 'Chat history cleared' });
+    } else {
+        res.status(404).json({ success: false, message: 'User not found' });
+    }
+});
+
 // In-memory message store for polling fallback (Vercel compatible)
 let messages = [];
 
 app.get('/api/messages', (req, res) => {
-    res.json(messages);
+    const { username } = req.query; // Optional: filter by user context if needed
+
+    // If username is provided, filter messages based on their lastCleared timestamp
+    let resultMessages = messages;
+    if (username) {
+        const users = getUsers();
+        const user = users.find(u => u.username === username);
+        if (user && user.lastCleared) {
+            resultMessages = messages.filter(m => m.timestamp > user.lastCleared);
+        }
+    }
+
+    res.json(resultMessages);
 });
 
 app.post('/api/messages', (req, res) => {
@@ -136,7 +169,21 @@ io.on('connection', (socket) => {
 
     socket.on('join', (username) => {
         socket.username = username;
+        onlineUsers.set(socket.id, username);
+
         console.log(`User ${username} joined (ID: ${socket.id})`);
+
+        // Broadcast online status
+        io.emit('status_update', { username, status: 'online' });
+
+        // Send current list of online users and their statuses to the joining user
+        const allUsers = getUsers().map(u => ({
+            username: u.username,
+            status: Array.from(onlineUsers.values()).includes(u.username) ? 'online' : 'offline',
+            lastSeen: userStatus.get(u.username)?.lastSeen || null
+        }));
+        socket.emit('user_list', allUsers);
+
         socket.broadcast.emit('system_message', `${username} has joined the chat`);
         socket.emit('system_message', `Welcome to PEACE CHAT, ${username}!`);
     });
@@ -162,6 +209,17 @@ io.on('connection', (socket) => {
     socket.on('disconnect', (reason) => {
         console.log(`Socket disconnected: ${socket.id}, reason: ${reason}`);
         if (socket.username) {
+            onlineUsers.delete(socket.id);
+            userStatus.set(socket.username, { lastSeen: Date.now() });
+
+            // Broadcast offline status
+            io.emit('status_update', {
+                username: socket.username,
+                status: 'offline',
+                lastSeen: Date.now()
+            });
+
+            // Only send system message if they are truly gone (not just a refresh which might reconnect quickly, but simple logic for now)
             io.emit('system_message', `${socket.username} has left the chat`);
         }
     });

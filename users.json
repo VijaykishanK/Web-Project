@@ -13,7 +13,8 @@
   },
   {
     "username": "Vijay",
-    "password": "123"
+    "password": "123",
+    "lastCleared": 1768033020673
   },
   {
     "username": "newuser_local",

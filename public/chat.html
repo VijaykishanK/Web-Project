@@ -24,32 +24,54 @@
 
         <!-- Header Section -->
         <header class="chat-header">
-            <h1>PEACE CHAT</h1>
-            <!-- Connection Status -->
-            <div id="connection-status" class="status-indicator">
-                <span id="status-dot"></span>
-                <span id="status-text">Connecting...</span>
+            <div class="header-left">
+                <h1>PEACE CHAT</h1>
+                <!-- Connection Status -->
+                <div id="connection-status" class="status-indicator">
+                    <span id="status-dot"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
             </div>
-            <!-- Logout Button -->
-            <button id="logout-btn" class="btn btn-primary"
-                style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+            <div class="header-right">
+                <button id="clear-chat-btn" class="btn btn-secondary"
+                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; margin-right: 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;">Clear
+                    Chat</button>
+                <button id="logout-btn" class="btn btn-primary"
+                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+            </div>
         </header>
 
-        <!-- Messages Area (Scrollable) -->
-        <div id="messages" class="chat-messages">
-            <!-- Messages will be dynamically inserted here by client.js -->
+        <div class="chat-content-wrapper" style="display: flex; flex: 1; overflow: hidden;">
+            <!-- User Sidebar -->
+            <aside id="user-sidebar" class="user-sidebar"
+                style="width: 250px; background: rgba(15, 23, 42, 0.3); border-right: 1px solid var(--glass-border); display: flex; flex-direction: column;">
+                <div class="sidebar-header" style="padding: 1rem; border-bottom: 1px solid var(--glass-border);">
+                    <h3 style="font-size: 1rem; color: var(--text-muted);">Users</h3>
+                </div>
+                <div id="user-list" class="user-list" style="flex: 1; overflow-y: auto; padding: 1rem;">
+                    <!-- User items will be injected here -->
+                </div>
+            </aside>
 
-            <!-- Default Welcome Message -->
-            <div class="message other">
-                <div class="message-meta">System</div>
-                Welcome to the chat!
-            </div>
-        </div>
+            <!-- Main Chat Area -->
+            <main class="chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <!-- Messages Area (Scrollable) -->
+                <div id="messages" class="chat-messages">
+                    <!-- Messages will be dynamically inserted here by client.js -->
 
-        <!-- Input Area (Fixed at bottom) -->
-        <div class="chat-input-area">
-            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
-            <button id="send-btn" class="btn btn-primary btn-send">Send</button>
+                    <!-- Default Welcome Message -->
+                    <div class="message other">
+                        <div class="message-meta">System</div>
+                        Welcome to the chat!
+                    </div>
+                </div>
+
+                <!-- Input Area (Fixed at bottom) -->
+                <div class="chat-input-area">
+                    <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                    <button id="send-btn" class="btn btn-primary btn-send">Send</button>
+                </div>
+            </main>
         </div>
     </div>
 
