@@ -173,6 +173,7 @@ function updateUserListUI() {
         div.style.cursor = 'pointer'; // Make clickable
 
         // CLICK HANDLER: Select user to chat
+        // Now explicit via button, but keeping row click for convenience
         div.onclick = () => {
             activeChatPartner = u.username;
             updateChatHeader();
@@ -204,7 +205,21 @@ function updateUserListUI() {
                 <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${u.username}</div>
                 <div style="font-size: 0.75rem; color: var(--text-muted);">${statusText}</div>
             </div>
+            <button class="chat-btn-small" style="background: var(--primary); border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; opacity: 0.8;">Chat</button>
         `;
+
+        // Prevent button click from bubbling if needed, but row click is fine too
+        const btn = div.querySelector('button');
+        if (btn) {
+            btn.onclick = (e) => {
+                e.stopPropagation(); // Prevent double trigger
+                activeChatPartner = u.username;
+                updateChatHeader();
+                updateUserListUI();
+                loadChatHistory();
+            };
+        }
+
         userListDiv.appendChild(div);
     });
 }
@@ -217,6 +232,53 @@ function updateChatHeader() {
             header.innerText = `Chatting with ${activeChatPartner}`;
         } else {
             header.innerText = 'Select a user to chat';
+        }
+    }
+
+    // Update Input Label (Bottom)
+    let recipientLabel = document.getElementById('recipient-label');
+    const inputArea = document.querySelector('.chat-input-area');
+
+    if (!recipientLabel && inputArea) {
+        // Create label if missing
+        recipientLabel = document.createElement('div');
+        recipientLabel.id = 'recipient-label';
+        recipientLabel.style.width = '100%';
+        recipientLabel.style.fontSize = '0.8rem';
+        recipientLabel.style.color = 'var(--primary)';
+        recipientLabel.style.marginBottom = '8px';
+        recipientLabel.style.fontWeight = '600';
+
+        // Insert before current contents
+        inputArea.insertBefore(recipientLabel, inputArea.firstChild);
+
+        // Ensure input area stacks vertically
+        inputArea.style.flexDirection = 'column';
+        inputArea.style.alignItems = 'flex-start';
+
+        // Wrap input and button in a horizontal row
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        if (messageInput && sendBtn) {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.width = '100%';
+            wrapper.style.gap = '0.8rem';
+
+            // Move elements into wrapper
+            inputArea.appendChild(wrapper);
+            wrapper.appendChild(messageInput);
+            wrapper.appendChild(sendBtn);
+        }
+    }
+
+    if (recipientLabel) {
+        if (activeChatPartner) {
+            recipientLabel.innerText = `Sending to: ${activeChatPartner}`;
+            recipientLabel.style.display = 'block';
+        } else {
+            recipientLabel.innerText = '';
+            recipientLabel.style.display = 'none';
         }
     }
 }
