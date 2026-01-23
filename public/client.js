@@ -106,7 +106,11 @@ function clearMessagesUI() {
         // Re-add welcome message
         const welcomeDiv = document.createElement('div');
         welcomeDiv.className = 'message other';
-        welcomeDiv.innerHTML = `<div class="message-meta">System</div>Welcome to the chat!`;
+        if (activeChatPartner) {
+            welcomeDiv.innerHTML = `<div class="message-meta">System</div>Started conversation with ${activeChatPartner}`;
+        } else {
+            welcomeDiv.innerHTML = `<div class="message-meta">System</div>Please select a user from the sidebar to start chatting.`;
+        }
         messagesDiv.appendChild(welcomeDiv);
     }
 }
@@ -176,7 +180,7 @@ function updateUserListUI() {
         // Now explicit via button, but keeping row click for convenience
         div.onclick = () => {
             activeChatPartner = u.username;
-            updateChatHeader();
+            updateChatUIState();
             updateUserListUI(); // Re-render to show highlight
             loadChatHistory();  // Fetch conversation
         };
@@ -214,7 +218,7 @@ function updateUserListUI() {
             btn.onclick = (e) => {
                 e.stopPropagation(); // Prevent double trigger
                 activeChatPartner = u.username;
-                updateChatHeader();
+                updateChatUIState();
                 updateUserListUI();
                 loadChatHistory();
             };
@@ -224,7 +228,7 @@ function updateUserListUI() {
     });
 }
 
-function updateChatHeader() {
+function updateChatUIState() {
     // Find header (assume h1 in chat-header)
     const header = document.querySelector('.chat-header h1');
     if (header) {
@@ -232,6 +236,26 @@ function updateChatHeader() {
             header.innerText = `Chatting with ${activeChatPartner}`;
         } else {
             header.innerText = 'Select a user to chat';
+        }
+    }
+
+    // Update Input/Button State
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    if (messageInput && sendBtn) {
+        if (activeChatPartner) {
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            messageInput.placeholder = "Type a message...";
+            // Automatically focus input when user selected
+            if (document.activeElement !== messageInput) {
+                messageInput.focus();
+            }
+        } else {
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+            messageInput.placeholder = "Select a user to chat...";
         }
     }
 
@@ -668,5 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Poll every 3 seconds for new messages (only when socket.io is down)
         setInterval(pollMessages, 3000);
         pollMessages(); // Initial poll
+
+        // Initial UI State Update
+        updateChatUIState();
     }
 });
