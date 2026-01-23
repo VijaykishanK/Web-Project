@@ -137,6 +137,28 @@ app.post('/api/clear-chat', (req, res) => {
 // In-memory message store for polling fallback (Vercel compatible)
 let messages = [];
 
+// API: Get User List (Fallback/Polling)
+app.get('/api/users', (req, res) => {
+    const users = getUsers(); // Read fresh from file
+    const now = Date.now();
+
+    // enhance with status
+    const publicUsers = users.map(u => {
+        const statusMeta = userStatus.get(u.username) || {};
+        // Consider online if active in last 30 seconds
+        const isOnline = statusMeta.lastActive && (now - statusMeta.lastActive < 30000);
+
+        return {
+            username: u.username,
+            status: isOnline ? 'online' : 'offline',
+            lastSeen: statusMeta.lastActive || null,
+            onlineSince: isOnline ? statusMeta.onlineSince : null
+        };
+    });
+
+    res.json(publicUsers);
+});
+
 // HEARTBEAT ENDPOINT (For Vercel-compatible online status)
 app.post('/api/heartbeat', (req, res) => {
     const { username } = req.body;

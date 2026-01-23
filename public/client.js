@@ -622,6 +622,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- API POLLING (Fallback when Socket.io is unavailable) ---
+        async function fetchUserList() {
+            try {
+                const res = await fetch('/api/users');
+                if (res.ok) {
+                    const users = await res.json();
+
+                    // Update map
+                    users.forEach(u => {
+                        usersMap.set(u.username, {
+                            status: u.status,
+                            lastSeen: u.lastSeen,
+                            onlineSince: u.onlineSince
+                        });
+                    });
+                    // Force UI update
+                    updateUserListUI(); // This now calls updateUserDropdownUI
+                }
+            } catch (err) {
+                console.error('User list fetch error:', err);
+            }
+        }
+
         async function pollMessages() {
             // Only poll if socket.io is NOT connected
             if (socket && socket.connected) {
@@ -641,11 +663,17 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error('Polling error:', err);
             }
+
+            // Also poll users if socket is down (or just periodically to be safe)
+            fetchUserList();
         }
 
         // Poll every 3 seconds for new messages (only when socket.io is down)
         setInterval(pollMessages, 3000);
         pollMessages(); // Initial poll
+
+        // Initial Fetch of users (regardless of socket status to populate dropdown fast)
+        fetchUserList();
 
         // Initial UI State Update
         updateChatUIState();
