@@ -307,20 +307,57 @@ input:focus {
     font-size: 0.95rem;
     line-height: 1.5;
     position: relative;
-    /* Pop-in animation for new messages */
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Updated Pop-and-Bounce animation */
+    animation: animePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 2px solid var(--glass-border);
+    overflow: hidden;
+    /* For shine effect */
 }
 
-@keyframes popIn {
-    from {
+@keyframes animePop {
+    0% {
         opacity: 0;
-        transform: scale(0.9);
+        transform: scale(0.5) translateY(20px);
     }
 
-    to {
+    100% {
         opacity: 1;
-        transform: scale(1);
+        transform: scale(1) translateY(0);
     }
+}
+
+/* Shine effect sweep */
+.message::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg,
+            transparent,
+            rgba(255, 255, 255, 0.05),
+            transparent);
+    transform: rotate(45deg);
+    animation: shineSweep 4s infinite linear;
+    pointer-events: none;
+}
+
+@keyframes shineSweep {
+    0% {
+        left: -150%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.message:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Own Messages (Right aligned, colored) */
@@ -329,14 +366,20 @@ input:focus {
     background: var(--primary);
     color: white;
     border-bottom-right-radius: 4px;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    border-bottom-left-radius: 24px;
 }
 
 /* Other Messages (Left aligned, grey) */
 .message.other {
     align-self: flex-start;
     background: var(--bg-card);
-    border: 1px solid var(--glass-border);
+    border: 2px solid var(--glass-border);
     border-bottom-left-radius: 4px;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    border-bottom-right-radius: 24px;
 }
 
 .message-meta {

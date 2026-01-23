@@ -88,12 +88,15 @@ function displayMessage(data) {
     const username = getStoredUser();
     const isOwn = data.user === username;
     div.className = `message ${isOwn ? 'own' : 'other'}`;
+
+    // Add randomized cartoon tilt (-2 to 2 degrees)
+    const randomTilt = (Math.random() * 4 - 2).toFixed(1);
+    div.style.transform = `rotate(${randomTilt}deg)`;
+
     div.innerHTML = `
         <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${timeString}</div>
         ${data.text}
     `;
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
