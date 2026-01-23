@@ -352,8 +352,20 @@ input:focus {
         border: none;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
+        /* Align to top */
+        padding: 0;
+        /* Remove padding to full-screen */
+    }
+
+    /* Re-add padding ONLY for the form container (login/register) */
+    .form-container {
         padding: 1.5rem;
+        height: 100%;
+        justify-content: center;
+        /* Keep login centered */
+        display: flex;
+        flex-direction: column;
     }
 
     /* Mobile Header adjustments */
