@@ -102,18 +102,43 @@ function displayMessage(data) {
     div.innerHTML = `
         <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${timeString}</div>
         <div class="message-text">${data.text}</div>
-        <!-- Message Actions -->
-        <div class="message-actions">
-            <button class="action-btn delete-trigger" title="Delete">🗑️</button>
-        </div>
     `;
 
-    // Handle Delete Trigger
-    const deleteBtn = div.querySelector('.delete-trigger');
-    deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        showDeleteMenu(div, data.id, isOwn);
+    // --- LONG PRESS LOGIC ---
+    let pressTimer;
+    const startPress = (e) => {
+        // Only trigger once
+        if (pressTimer) return;
+
+        div.classList.add('long-pressing');
+        pressTimer = setTimeout(() => {
+            div.classList.remove('long-pressing');
+            showDeleteMenu(div, data.id, isOwn);
+            pressTimer = null;
+            // Vibrate for feedback if possible
+            if (navigator.vibrate) navigator.vibrate(50);
+        }, 500); // 0.5s threshold
     };
+
+    const cancelPress = () => {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+        div.classList.remove('long-pressing');
+    };
+
+    // Mouse Events
+    div.addEventListener('mousedown', startPress);
+    div.addEventListener('mouseup', cancelPress);
+    div.addEventListener('mouseleave', cancelPress);
+
+    // Touch Events
+    div.addEventListener('touchstart', (e) => {
+        // Don't prevent default, we want to allow clicks/scrolling
+        startPress(e);
+    }, { passive: true });
+    div.addEventListener('touchend', cancelPress);
+    div.addEventListener('touchmove', cancelPress);
+    div.addEventListener('touchcancel', cancelPress);
 
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
