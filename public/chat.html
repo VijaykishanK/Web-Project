@@ -40,9 +40,19 @@
                     <span id="status-text">Connecting...</span>
                 </div>
             </div>
-            <button id="clear-chat-btn" class="btn btn-secondary">Clear Chat</button>
-            <button id="delete-account-btn" class="btn btn-secondary">Delete Account</button>
-            <button id="logout-btn" class="btn btn-primary">Logout</button>
+            <!-- Grouped Controls Box -->
+            <div class="settings-box-container">
+                <button id="settings-box-btn" class="btn btn-secondary dropdown-trigger">
+                    <span>Box</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div id="settings-dropdown-menu" class="dropdown-menu hidden">
+                    <button id="clear-chat-btn" class="menu-item delete-option">Clear Chat</button>
+                    <button id="delete-account-btn" class="menu-item delete-option" style="color: #fca5a5;">Delete
+                        Account</button>
+                    <button id="logout-btn" class="menu-item">Logout</button>
+                </div>
+            </div>
         </header>
 
         <div class="chat-content-wrapper" style="display: flex; flex: 1; overflow: hidden;">

@@ -872,6 +872,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ================================================================
+    // SETTINGS "BOX" MENU LOGIC
+    // ================================================================
+    const settingsBoxBtn = document.getElementById('settings-box-btn');
+    const settingsDropdownMenu = document.getElementById('settings-dropdown-menu');
+
+    if (settingsBoxBtn && settingsDropdownMenu) {
+        settingsBoxBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsDropdownMenu.classList.toggle('hidden');
+            // Close other dropdowns
+            if (userDropdownMenu) userDropdownMenu.classList.add('hidden');
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', () => {
+            settingsDropdownMenu.classList.add('hidden');
+        });
+
+        // Prevent closing when clicking inside menu
+        settingsDropdownMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
     // Wrap the original updateUserListUI to also update the dropdown
     const originalUpdateUserListUI = updateUserListUI;
     updateUserListUI = function () {
