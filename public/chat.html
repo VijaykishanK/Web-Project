@@ -40,52 +40,36 @@
                     <span id="status-text">Connecting...</span>
                 </div>
             </div>
-            <div class="header-right" style="display: flex; gap: 0.5rem;">
-                <button id="users-toggle-btn" class="btn btn-secondary mobile-only"
-                    style="width: auto; padding: 0.5rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.1); display: none;">
-                    Users
-                </button>
-                <button id="clear-chat-btn" class="btn btn-secondary"
-                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;">Clear
-                    Chat</button>
-                <button id="logout-btn" class="btn btn-primary"
-                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+            <button id="clear-chat-btn" class="btn btn-secondary"
+                style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;">Clear
+                Chat</button>
+            <button id="logout-btn" class="btn btn-primary"
+                style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
+    </div>
+    </header>
+
+    <div class="chat-content-wrapper" style="display: flex; flex: 1; overflow: hidden;">
+        <!-- Main Chat Area -->
+        <main class="chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <!-- Messages Area (Scrollable) -->
+            <div id="messages" class="chat-messages">
+                <!-- Messages will be dynamically inserted here by client.js -->
+
+                <!-- Default Welcome Message -->
+                <div class="message other">
+                    <div class="message-meta">System</div>
+                    Welcome to the chat!
+                </div>
             </div>
-        </header>
 
-        <div class="chat-content-wrapper" style="display: flex; flex: 1; overflow: hidden;">
-            <!-- User Sidebar -->
-            <aside id="user-sidebar" class="user-sidebar"
-                style="width: 250px; background: rgba(15, 23, 42, 0.3); border-right: 1px solid var(--glass-border); display: flex; flex-direction: column;">
-                <div class="sidebar-header" style="padding: 1rem; border-bottom: 1px solid var(--glass-border);">
-                    <h3 style="font-size: 1rem; color: var(--text-muted);">Users</h3>
-                </div>
-                <div id="user-list" class="user-list" style="flex: 1; overflow-y: auto; padding: 1rem;">
-                    <!-- User items will be injected here -->
-                </div>
-            </aside>
-
-            <!-- Main Chat Area -->
-            <main class="chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                <!-- Messages Area (Scrollable) -->
-                <div id="messages" class="chat-messages">
-                    <!-- Messages will be dynamically inserted here by client.js -->
-
-                    <!-- Default Welcome Message -->
-                    <div class="message other">
-                        <div class="message-meta">System</div>
-                        Welcome to the chat!
-                    </div>
-                </div>
-
-                <!-- Input Area (Fixed at bottom) -->
-                <div class="chat-input-area">
-                    <input type="text" id="message-input" placeholder="Select a user to chat..." autocomplete="off"
-                        disabled>
-                    <button id="send-btn" class="btn btn-primary btn-send" disabled>Send</button>
-                </div>
-            </main>
-        </div>
+            <!-- Input Area (Fixed at bottom) -->
+            <div class="chat-input-area">
+                <input type="text" id="message-input" placeholder="Select a user to chat..." autocomplete="off"
+                    disabled>
+                <button id="send-btn" class="btn btn-primary btn-send" disabled>Send</button>
+            </div>
+        </main>
+    </div>
     </div>
 
     <!-- Import Socket.io Client Library from CDN -->

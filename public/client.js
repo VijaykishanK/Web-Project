@@ -109,30 +109,16 @@ function clearMessagesUI() {
         if (activeChatPartner) {
             welcomeDiv.innerHTML = `<div class="message-meta">System</div>Started conversation with ${activeChatPartner}`;
         } else {
-            welcomeDiv.innerHTML = `<div class="message-meta">System</div>Please select a user from the sidebar to start chatting.`;
+            // More direct prompt since sidebar is gone
+            welcomeDiv.innerHTML = `<div class="message-meta">System</div>Please select a user from the top menu to start chatting.`;
         }
         messagesDiv.appendChild(welcomeDiv);
     }
 }
 
-// User List Management
+// User List Management & Sidebar (Legacy removed, now Dropdown only)
 let usersMap = new Map(); // username -> { status, lastSeen, onlineSince }
-let isSidebarOpen = false;
 
-function toggleSidebar() {
-    const sidebar = document.getElementById('user-sidebar');
-    const toggleBtn = document.getElementById('users-toggle-btn');
-    if (!sidebar) return;
-
-    isSidebarOpen = !isSidebarOpen;
-    if (isSidebarOpen) {
-        sidebar.classList.add('active');
-        if (toggleBtn) toggleBtn.style.background = 'rgba(255, 255, 255, 0.3)';
-    } else {
-        sidebar.classList.remove('active');
-        if (toggleBtn) toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-    }
-}
 
 function updateUserListUI() {
     const userListDiv = document.getElementById('user-list');
@@ -270,51 +256,10 @@ function updateChatUIState() {
         }
     }
 
-    // Update Input Label (Bottom)
-    let recipientLabel = document.getElementById('recipient-label');
-    const inputArea = document.querySelector('.chat-input-area');
-
-    if (!recipientLabel && inputArea) {
-        // Create label if missing
-        recipientLabel = document.createElement('div');
-        recipientLabel.id = 'recipient-label';
-        recipientLabel.style.width = '100%';
-        recipientLabel.style.fontSize = '0.8rem';
-        recipientLabel.style.color = 'var(--primary)';
-        recipientLabel.style.marginBottom = '8px';
-        recipientLabel.style.fontWeight = '600';
-
-        // Insert before current contents
-        inputArea.insertBefore(recipientLabel, inputArea.firstChild);
-
-        // Ensure input area stacks vertically
-        inputArea.style.flexDirection = 'column';
-        inputArea.style.alignItems = 'flex-start';
-
-        // Wrap input and button in a horizontal row
-        const messageInput = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        if (messageInput && sendBtn) {
-            const wrapper = document.createElement('div');
-            wrapper.style.display = 'flex';
-            wrapper.style.width = '100%';
-            wrapper.style.gap = '0.8rem';
-
-            // Move elements into wrapper
-            inputArea.appendChild(wrapper);
-            wrapper.appendChild(messageInput);
-            wrapper.appendChild(sendBtn);
-        }
-    }
-
+    // Update Input Label (Bottom) - REMOVED as per user request ("remove ... below")
+    const recipientLabel = document.getElementById('recipient-label');
     if (recipientLabel) {
-        if (activeChatPartner) {
-            recipientLabel.innerText = `Sending to: ${activeChatPartner}`;
-            recipientLabel.style.display = 'block';
-        } else {
-            recipientLabel.innerText = '';
-            recipientLabel.style.display = 'none';
-        }
+        recipientLabel.remove();
     }
 }
 
@@ -543,10 +488,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const logoutBtn = document.getElementById('logout-btn');
         const clearChatBtn = document.getElementById('clear-chat-btn');
         const toggleUsersBtn = document.getElementById('users-toggle-btn');
+        // Sidebar toggle removed
 
-        if (toggleUsersBtn) {
-            toggleUsersBtn.addEventListener('click', toggleSidebar);
-        }
 
         if (clearChatBtn) {
             clearChatBtn.addEventListener('click', async () => {
