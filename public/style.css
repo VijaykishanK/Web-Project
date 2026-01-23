@@ -377,4 +377,108 @@ input:focus {
     .message {
         max-width: 85%;
     }
+}/* ================================================================ */
+/* HEADER DROPDOWN STYLES */
+/* ================================================================ */
+
+.user-select-container {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-trigger {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    min-width: 150px;
+    justify-content: space-between;
+}
+
+.dropdown-trigger:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.dropdown-trigger .arrow {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    width: 250px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 0.5rem;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-item {
+    padding: 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transition: background 0.2s;
+    color: var(--text-main);
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item.active {
+    background: var(--primary);
+    color: white;
+}
+
+.dropdown-item .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dropdown-item .user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-item .username {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.dropdown-item .status-text {
+    font-size: 0.75rem;
+    opacity: 0.7;
 }

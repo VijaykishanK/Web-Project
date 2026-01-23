@@ -25,7 +25,15 @@
         <!-- Header Section -->
         <header class="chat-header">
             <div class="header-left" style="display: flex; align-items: center; gap: 0.8rem;">
-                <h1>PEACE CHAT</h1>
+                <div class="user-select-container">
+                    <button id="user-select-btn" class="dropdown-trigger">
+                        <span id="current-chat-user">Select User</span>
+                        <span class="arrow">▼</span>
+                    </button>
+                    <div id="user-dropdown-menu" class="dropdown-menu hidden">
+                        <!-- User items injected here -->
+                    </div>
+                </div>
                 <!-- Connection Status -->
                 <div id="connection-status" class="status-indicator">
                     <span id="status-dot"></span>

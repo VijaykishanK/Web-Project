@@ -229,9 +229,20 @@ function updateUserListUI() {
 }
 
 function updateChatUIState() {
-    // Find header (assume h1 in chat-header)
+    // Find trigger button text
+    const triggerText = document.getElementById('current-chat-user');
+    if (triggerText) {
+        if (activeChatPartner) {
+            triggerText.innerText = `Chatting with ${activeChatPartner}`;
+        } else {
+            triggerText.innerText = 'Select User';
+        }
+    }
+
+    // Find header (assume h1 in chat-header) - LEGACY FALLBACK or remove if unused
     const header = document.querySelector('.chat-header h1');
     if (header) {
+        // If we still have an H1 (mobile?), update it too
         if (activeChatPartner) {
             header.innerText = `Chatting with ${activeChatPartner}`;
         } else {
@@ -695,5 +706,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Initial UI State Update
         updateChatUIState();
+    }
+
+    // ================================================================
+    // DROPDOWN USER SELECTION LOGIC
+    // ================================================================
+    const userSelectBtn = document.getElementById('user-select-btn');
+    const userDropdownMenu = document.getElementById('user-dropdown-menu');
+
+    if (userSelectBtn && userDropdownMenu) {
+        // Toggle Dropdown
+        userSelectBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdownMenu.classList.toggle('hidden');
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', () => {
+            userDropdownMenu.classList.add('hidden');
+        });
+
+        // Prevent closing when clicking inside menu
+        userDropdownMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    // Wrap the original updateUserListUI to also update the dropdown
+    const originalUpdateUserListUI = updateUserListUI;
+    updateUserListUI = function () {
+        if (typeof originalUpdateUserListUI === 'function') {
+            originalUpdateUserListUI();
+        }
+        updateUserDropdownUI();
+    };
+
+    function updateUserDropdownUI() {
+        if (!userDropdownMenu) return;
+
+        userDropdownMenu.innerHTML = '';
+        const currentUsername = getStoredUser();
+        const now = Date.now();
+
+        // Convert map to array and sort (online first, close second)
+        const users = Array.from(usersMap.entries()).map(([username, data]) => ({
+            username,
+            ...data
+        })).sort((a, b) => { // Online users first
+            const aOnline = a.status === 'online';
+            const bOnline = b.status === 'online';
+            if (aOnline && !bOnline) return -1;
+            if (!aOnline && bOnline) return 1;
+            return a.username.localeCompare(b.username);
+        });
+
+        users.forEach(u => {
+            if (u.username === currentUsername) return;
+
+            const div = document.createElement('div');
+            div.className = `dropdown-item ${activeChatPartner === u.username ? 'active' : ''}`;
+
+            const statusColor = u.status === 'online' ? '#22c55e' : '#94a3b8';
+            let statusText = 'Offline';
+            const options = { hour: '2-digit', minute: '2-digit' };
+
+            if (u.status === 'online') {
+                statusText = 'Online';
+            } else if (u.lastSeen) {
+                const mins = Math.floor((now - u.lastSeen) / 60000);
+                statusText = mins < 60 ? `Seen ${mins}m ago` : `Seen ${new Date(u.lastSeen).toLocaleTimeString([], options)}`;
+            }
+
+            div.innerHTML = `
+                <div class="status-indicator" style="background-color: ${statusColor};"></div>
+                <div class="user-info">
+                    <span class="username">${u.username}</span>
+                    <span class="status-text">${statusText}</span>
+                </div>
+            `;
+
+            div.onclick = () => {
+                activeChatPartner = u.username;
+                updateChatUIState();
+                updateUserListUI(); // Refreshes both sidebar and dropdown
+                loadChatHistory();
+                userDropdownMenu.classList.add('hidden'); // Close dropdown
+            };
+
+            userDropdownMenu.appendChild(div);
+        });
+
+        if (users.length === 0 || (users.length === 1 && users[0].username === currentUsername)) {
+            userDropdownMenu.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.9rem;">No other users found</div>';
+        }
     }
 });
