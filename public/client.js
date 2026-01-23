@@ -88,17 +88,90 @@ function displayMessage(data) {
     const username = getStoredUser();
     const isOwn = data.user === username;
     div.className = `message ${isOwn ? 'own' : 'other'}`;
+    div.setAttribute('data-id', data.id); // Store ID for removal
 
     // Add randomized cartoon tilt (-2 to 2 degrees)
     const randomTilt = (Math.random() * 4 - 2).toFixed(1);
     div.style.transform = `rotate(${randomTilt}deg)`;
 
+    // --- NEW: SENT ANIMATION (Multicolor pulse) ---
+    if (data.isJustSent) {
+        div.classList.add('sent-animating');
+    }
+
     div.innerHTML = `
         <div class="message-meta">${isOwn ? 'You' : (data.user || 'Unknown')} • ${timeString}</div>
-        ${data.text}
+        <div class="message-text">${data.text}</div>
+        <!-- Message Actions -->
+        <div class="message-actions">
+            <button class="action-btn delete-trigger" title="Delete">🗑️</button>
+        </div>
     `;
+
+    // Handle Delete Trigger
+    const deleteBtn = div.querySelector('.delete-trigger');
+    deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        showDeleteMenu(div, data.id, isOwn);
+    };
+
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function showDeleteMenu(messageDiv, messageId, isOwn) {
+    // Remove existing menus
+    const existing = document.querySelectorAll('.delete-menu');
+    existing.forEach(m => m.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'delete-menu';
+
+    let html = `<div class="delete-option" data-action="me">Delete for me</div>`;
+    if (isOwn) {
+        html += `<div class="delete-option" data-action="everyone">Delete for everyone</div>`;
+    }
+    menu.innerHTML = html;
+    messageDiv.appendChild(menu);
+
+    // Close on click outside
+    const closeMenu = (e) => {
+        if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closeMenu), 0);
+
+    // Actions
+    menu.querySelectorAll('.delete-option').forEach(opt => {
+        opt.onclick = async (e) => {
+            const action = opt.getAttribute('data-action');
+            const forEveryone = action === 'everyone';
+
+            try {
+                const res = await fetch('/api/delete-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messageId,
+                        username: getStoredUser(),
+                        deleteForEveryone: forEveryone
+                    })
+                });
+
+                if (res.ok) {
+                    messageDiv.remove();
+                    menu.remove();
+                } else {
+                    const error = await res.json();
+                    alert('Delete failed: ' + error.message);
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+            }
+        };
+    });
 }
 
 function clearMessagesUI() {
@@ -611,7 +684,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: text,
                     timestamp: Date.now(),
                     id: clientMsgId, // Use the SAME ID
-                    to: activeChatPartner
+                    to: activeChatPartner,
+                    isJustSent: true // Trigger animation
                 };
                 displayMessage(optimisticMsg);
 
@@ -649,7 +723,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (socket) {
             socket.on('chat_message', (data) => {
+                // If I am the sender, I already showed the optimistic message with animation
+                // So I ignore the reflection here to avoid duplicates
+                if (data.user === username) return;
                 displayMessage(data);
+            });
+
+            socket.on('delete_message', (data) => {
+                const msgDiv = document.querySelector(`.message[data-id="${data.id}"]`);
+                if (msgDiv) msgDiv.remove();
             });
 
             socket.on('user_list', (users) => {

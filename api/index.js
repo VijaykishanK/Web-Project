@@ -207,7 +207,7 @@ app.get('/api/messages', (req, res) => {
     if (username) {
         // First filter by persistence/clear
         const users = getUsers();
-        const user = users.find(u => u.username === username);
+        const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
         if (user && user.lastCleared) {
             resultMessages = resultMessages.filter(m => m.timestamp > user.lastCleared);
         }
@@ -215,15 +215,18 @@ app.get('/api/messages', (req, res) => {
         // Then filter by conversation partner if specified
         if (targetUser) {
             resultMessages = resultMessages.filter(m =>
-                (m.user === username && m.to === targetUser) ||
-                (m.user === targetUser && m.to === username)
+                (m.user.toLowerCase() === username.toLowerCase() && m.to.toLowerCase() === targetUser.toLowerCase()) ||
+                (m.user.toLowerCase() === targetUser.toLowerCase() && m.to.toLowerCase() === username.toLowerCase())
             );
         } else {
-            // General fetch (e.g. on load?): Return ALL messages relevant to me?
-            // User asked: "messages should not be visible to everyone".
-            // So we strictly return messages where (user == me OR to == me).
-            resultMessages = resultMessages.filter(m => m.user === username || m.to === username);
+            resultMessages = resultMessages.filter(m => m.user.toLowerCase() === username.toLowerCase() || m.to.toLowerCase() === username.toLowerCase());
         }
+
+        // --- NEW: Filter out messages deleted 'for me' ---
+        resultMessages = resultMessages.filter(m => {
+            if (!m.deletedBy) return true;
+            return !m.deletedBy.some(u => u.toLowerCase() === username.toLowerCase());
+        });
     }
 
     res.json(resultMessages);
@@ -258,6 +261,37 @@ app.post('/api/messages', (req, res) => {
     // This API endpoint is purely for fallback/polling when socket.io is unavailable.
 
     res.json({ success: true, message: newMessage });
+});
+
+app.post('/api/delete-message', (req, res) => {
+    const { messageId, username, deleteForEveryone } = req.body;
+    if (!messageId || !username) {
+        return res.status(400).json({ success: false, message: 'Missing parameters' });
+    }
+
+    const msg = messages.find(m => String(m.id) === String(messageId));
+    if (!msg) {
+        return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    if (deleteForEveryone) {
+        // Only sender can delete for everyone
+        if (msg.user.toLowerCase() !== username.toLowerCase()) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+        // Remove from global array (Vercel compatible)
+        messages = messages.filter(m => String(m.id) !== String(messageId));
+        // Notify others
+        io.emit('delete_message', { id: messageId });
+    } else {
+        // Delete just for the requesting user
+        if (!msg.deletedBy) msg.deletedBy = [];
+        if (!msg.deletedBy.some(u => u.toLowerCase() === username.toLowerCase())) {
+            msg.deletedBy.push(username);
+        }
+    }
+
+    res.json({ success: true });
 });
 
 app.all('/api/*', (req, res) => {
