@@ -45,37 +45,36 @@
                 Chat</button>
             <button id="logout-btn" class="btn btn-primary"
                 style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">Logout</button>
-    </div>
-    </header>
+        </header>
 
-    <div class="chat-content-wrapper" style="display: flex; flex: 1; overflow: hidden;">
-        <!-- Main Chat Area -->
-        <main class="chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-            <!-- Messages Area (Scrollable) -->
-            <div id="messages" class="chat-messages">
-                <!-- Messages will be dynamically inserted here by client.js -->
+        <div class="chat-content-wrapper" style="display: flex; flex: 1; overflow: hidden;">
+            <!-- Main Chat Area -->
+            <main class="chat-main" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <!-- Messages Area (Scrollable) -->
+                <div id="messages" class="chat-messages">
+                    <!-- Messages will be dynamically inserted here by client.js -->
 
-                <!-- Default Welcome Message -->
-                <div class="message other">
-                    <div class="message-meta">System</div>
-                    Welcome to the chat!
+                    <!-- Default Welcome Message -->
+                    <div class="message other">
+                        <div class="message-meta">System</div>
+                        Welcome to the chat!
+                    </div>
                 </div>
-            </div>
 
-            <!-- Input Area (Fixed at bottom) -->
-            <div class="chat-input-area">
-                <input type="text" id="message-input" placeholder="Select a user to chat..." autocomplete="off"
-                    disabled>
-                <button id="send-btn" class="btn btn-primary btn-send" disabled>Send</button>
-            </div>
-        </main>
-    </div>
-    </div>
+                <!-- Input Area (Fixed at bottom) -->
+                <div class="chat-input-area">
+                    <input type="text" id="message-input" placeholder="Select a user to chat..." autocomplete="off"
+                        disabled>
+                    <button id="send-btn" class="btn btn-primary btn-send" disabled>Send</button>
+                </div>
+            </main>
+        </div>
+        <!-- End Container -->
 
-    <!-- Import Socket.io Client Library from CDN -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- Import My Client Logic -->
-    <script src="client.js"></script>
+        <!-- Import Socket.io Client Library from CDN -->
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <!-- Import My Client Logic -->
+        <script src="client.js"></script>
 </body>
 
 </html>
