@@ -134,6 +134,25 @@ app.post('/api/clear-chat', (req, res) => {
     }
 });
 
+app.post('/api/delete-account', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ success: false, message: 'Username and password required' });
+    }
+
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.username === username && u.password === password);
+
+    if (userIndex !== -1) {
+        users.splice(userIndex, 1);
+        saveUsers(users);
+        if (userStatus.has(username)) userStatus.delete(username);
+        res.json({ success: true, message: 'Account deleted successfully' });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+});
+
 // In-memory message store for polling fallback (Vercel compatible)
 let messages = [];
 

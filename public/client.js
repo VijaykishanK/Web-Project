@@ -514,6 +514,39 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const deleteAccountBtn = document.getElementById('delete-account-btn');
+        if (deleteAccountBtn) {
+            deleteAccountBtn.addEventListener('click', async () => {
+                const password = prompt("Please enter your password to confirm account deletion.\n\nWARNING: This cannot be undone!");
+                if (!password) return; // User cancelled
+
+                const username = getStoredUser();
+
+                if (!confirm(`Are you absolutely sure you want to delete the account '${username}'?`)) return;
+
+                try {
+                    const res = await fetch('/api/delete-account', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.success) {
+                        alert('Account deleted successfully. We are sorry to see you go!');
+                        localStorage.removeItem('chat_username');
+                        window.location.href = '/index.html';
+                    } else {
+                        alert(data.message || 'Deletion failed. Please check your password.');
+                    }
+                } catch (err) {
+                    console.error('Delete Account Error:', err);
+                    alert('Error deleting account see console.');
+                }
+            });
+        }
+
         let isSending = false; // Flag to prevent duplicate sends
 
         async function sendMessage() {
