@@ -184,6 +184,25 @@ input:focus {
     text-decoration: underline;
 }
 
+/* Error Message Styling */
+.error-msg {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    padding: 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 1.25rem;
+    text-align: left;
+    line-height: 1.4;
+}
+
+.error-msg a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
 /* ================================================================ */
 /* CHAT INTERFACE SPECIFIC STYLES */
 /* ================================================================ */

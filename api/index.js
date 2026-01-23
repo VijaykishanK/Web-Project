@@ -77,7 +77,7 @@ app.post('/api/register', (req, res) => {
     }
 
     const users = getUsers();
-    if (users.find(u => u.username === username)) {
+    if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
         return res.status(400).json({ success: false, message: 'Username already taken' });
     }
 
@@ -91,7 +91,7 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     const users = getUsers();
-    const user = users.find(u => u.username === username && u.password === password);
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
 
     if (user) {
         res.json({ success: true, username: user.username });
@@ -107,7 +107,7 @@ app.post('/api/reset-password', (req, res) => {
     }
 
     const users = getUsers();
-    const user = users.find(u => u.username === username);
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
 
     if (user) {
         user.password = newPassword;
@@ -123,7 +123,7 @@ app.post('/api/clear-chat', (req, res) => {
     if (!username) return res.status(400).json({ success: false, message: 'Username required' });
 
     const users = getUsers();
-    const user = users.find(u => u.username === username);
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
 
     if (user) {
         user.lastCleared = Date.now();
@@ -141,7 +141,7 @@ app.post('/api/delete-account', (req, res) => {
     }
 
     const users = getUsers();
-    const userIndex = users.findIndex(u => u.username === username && u.password === password);
+    const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
 
     if (userIndex !== -1) {
         users.splice(userIndex, 1);

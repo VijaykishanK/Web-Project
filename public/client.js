@@ -409,9 +409,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const username = document.getElementById('reg-username').value.trim();
             const password = document.getElementById('reg-password').value.trim();
+            const errorDiv = document.getElementById('reg-error');
 
             if (!username || !password) {
-                alert('Username and password are required');
+                if (errorDiv) {
+                    errorDiv.innerText = 'Username and password are required';
+                    errorDiv.classList.remove('hidden');
+                }
                 return;
             }
 
@@ -430,8 +434,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (!res.ok) {
-                    throw new Error(data.message || 'Registration failed');
+                    if (errorDiv) {
+                        let msg = data.message || 'Registration failed';
+                        if (msg.includes('already taken')) {
+                            msg = `Username '${username}' is already taken. <a href="#" id="login-suggestion">Login instead?</a>`;
+                            errorDiv.innerHTML = msg;
+                            document.getElementById('login-suggestion').onclick = (e) => {
+                                e.preventDefault();
+                                registerDiv.classList.add('hidden');
+                                loginDiv.classList.remove('hidden');
+                                errorDiv.classList.add('hidden');
+                            };
+                        } else {
+                            errorDiv.innerText = msg;
+                        }
+                        errorDiv.classList.remove('hidden');
+                    }
+                    return;
                 }
+
+                // SUCCESS
+                if (errorDiv) errorDiv.classList.add('hidden');
 
                 // VISUAL FEEDBACK: Change button to show success
                 const regBtn = registerForm.querySelector('button');
@@ -459,7 +482,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 2500);
             } catch (err) {
                 console.error('Registration Error:', err);
-                alert('Registration Error: ' + err.message);
+                if (errorDiv) {
+                    errorDiv.innerText = 'Registration Error: ' + err.message;
+                    errorDiv.classList.remove('hidden');
+                }
             }
         });
     }
