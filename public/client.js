@@ -152,51 +152,55 @@ function showDeleteMenu(messageDiv, messageId, isOwn) {
     const menu = document.createElement('div');
     menu.className = 'delete-menu';
 
-    let html = `<div class="delete-option" data-action="me">Delete for me</div>`;
+    // Add options
+    const deleteMe = document.createElement('div');
+    deleteMe.className = 'delete-option';
+    deleteMe.innerText = 'Delete for Me';
+    deleteMe.onclick = () => performDelete(messageId, false, messageDiv, menu);
+    menu.appendChild(deleteMe);
+
     if (isOwn) {
-        html += `<div class="delete-option" data-action="everyone">Delete for everyone</div>`;
+        const deleteEveryone = document.createElement('div');
+        deleteEveryone.className = 'delete-option';
+        deleteEveryone.innerText = 'Delete for Everyone';
+        deleteEveryone.onclick = () => performDelete(messageId, true, messageDiv, menu);
+        menu.appendChild(deleteEveryone);
     }
-    menu.innerHTML = html;
+
     messageDiv.appendChild(menu);
 
-    // Close on click outside
+    // Close on click outside (robust version)
     const closeMenu = (e) => {
-        if (!menu.contains(e.target)) {
+        if (!menu.contains(e.target) && !messageDiv.contains(e.target)) {
             menu.remove();
-            document.removeEventListener('click', closeMenu);
+            document.removeEventListener('mousedown', closeMenu);
         }
     };
-    setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    setTimeout(() => document.addEventListener('mousedown', closeMenu), 10);
+}
 
-    // Actions
-    menu.querySelectorAll('.delete-option').forEach(opt => {
-        opt.onclick = async (e) => {
-            const action = opt.getAttribute('data-action');
-            const forEveryone = action === 'everyone';
+async function performDelete(messageId, forEveryone, messageDiv, menu) {
+    try {
+        const res = await fetch('/api/delete-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messageId,
+                username: getStoredUser(),
+                deleteForEveryone: forEveryone
+            })
+        });
 
-            try {
-                const res = await fetch('/api/delete-message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        messageId,
-                        username: getStoredUser(),
-                        deleteForEveryone: forEveryone
-                    })
-                });
-
-                if (res.ok) {
-                    messageDiv.remove();
-                    menu.remove();
-                } else {
-                    const error = await res.json();
-                    alert('Delete failed: ' + error.message);
-                }
-            } catch (err) {
-                console.error('Delete error:', err);
-            }
-        };
-    });
+        if (res.ok) {
+            messageDiv.remove();
+            if (menu) menu.remove();
+        } else {
+            const error = await res.json();
+            alert('Delete failed: ' + error.message);
+        }
+    } catch (err) {
+        console.error('Delete error:', err);
+    }
 }
 
 function clearMessagesUI() {

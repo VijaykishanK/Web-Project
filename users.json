@@ -52,5 +52,25 @@
     "username": "Alice",
     "password": "123",
     "lastCleared": 0
+  },
+  {
+    "username": "user1",
+    "password": "123",
+    "lastCleared": 0
+  },
+  {
+    "username": "user2",
+    "password": "123",
+    "lastCleared": 0
+  },
+  {
+    "username": "v_user2",
+    "password": "123",
+    "lastCleared": 0
+  },
+  {
+    "username": "v_user1",
+    "password": "123",
+    "lastCleared": 0
   }
 ]
