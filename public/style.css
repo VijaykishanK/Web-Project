@@ -381,6 +381,28 @@ input:focus {
     display: none;
 }
 
+/* Horizontal variation for settings */
+.dropdown-menu.horizontal {
+    flex-direction: row;
+    min-width: max-content;
+    gap: 0.5rem;
+    padding: 0.4rem;
+}
+
+.dropdown-menu.horizontal .menu-item {
+    width: auto;
+    white-space: nowrap;
+    text-align: center;
+    padding: 0.6rem 1rem;
+}
+
+.dropdown-menu.horizontal .menu-item:hover {
+    padding-left: 1rem;
+    /* Reset indent from default menu-item:hover */
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.15);
+}
+
 #status-text {
     font-size: 0.85rem;
     color: #22c55e;
