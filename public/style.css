@@ -385,8 +385,20 @@ input:focus {
 .dropdown-menu.horizontal {
     flex-direction: row;
     min-width: max-content;
+    max-width: 90vw;
+    /* Prevent overflow on mobile */
+    overflow-x: auto;
     gap: 0.5rem;
     padding: 0.4rem;
+    scrollbar-width: none;
+    /* Hide scrollbar for Firefox */
+    -ms-overflow-style: none;
+    /* Hide scrollbar for IE/Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.dropdown-menu.horizontal::-webkit-scrollbar {
+    display: none;
 }
 
 .dropdown-menu.horizontal .menu-item {
