@@ -88,7 +88,7 @@ function displayMessage(data) {
     const username = getStoredUser();
     const isOwn = data.user === username;
     div.className = `message ${isOwn ? 'own' : 'other'}`;
-    div.setAttribute('data-id', data.id); // Store ID for removal
+    div.setAttribute('data-id', msgId); // Store ID for removal (Robust)
 
     // Add randomized cartoon tilt (-2 to 2 degrees)
     const randomTilt = (Math.random() * 4 - 2).toFixed(1);
@@ -832,6 +832,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (res.ok) {
                     const messages = await res.json();
                     messages.forEach(msg => displayMessage(msg));
+
+                    // SYNC DELETIONS: Remove messages that are no longer on the server
+                    // This handles "Delete for Everyone" when using polling (Vercel)
+                    if (messages.length > 0) {
+                        const serverIds = new Set(messages.map(m => String(m.id)));
+                        const serverMsgStart = messages[0].timestamp; // Approximate start of history window
+
+                        document.querySelectorAll('.message').forEach(div => {
+                            const id = div.getAttribute('data-id');
+                            // Only delete if it has an ID, is NOT in server list
+                            // AND is not a local optimistic message (check if it's "sent-animating" or very new?)
+                            // Simplified: Just check if ID is missing. Optimistic messages have same ID as server eventually.
+                            // We need to be careful not to delete a message we JUST sent but server hasn't indexed yet?
+                            // Actually, optimistic messages are added with the same clientMsgId.
+                            // If api/messages returns the full list, our optimistic one should be there or typically replaced.
+                            if (id && !serverIds.has(id)) {
+                                // Double check: is it a system message?
+                                if (div.querySelector('.message-meta').innerText === 'System') return;
+
+                                div.remove();
+                                displayedMessageIds.delete(id);
+                            }
+                        });
+                    }
                 }
             } catch (err) {
                 console.error('Polling error:', err);
